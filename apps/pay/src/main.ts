@@ -109,7 +109,9 @@ async function sendPayment(info: Info, w: Wallet) {
   if (info.asset === 'GRAM') {
     await tc.sendTransaction({
       validUntil, network,
-      messages: [{ address: info.sellerAddress, amount: info.amountRaw, payload: b64(comment(payload)) }],
+      // Non-bounceable: a fresh seller wallet (never used) would bounce a bounceable payment
+      // back to the customer (seen on testnet, evidence/p0-spike.md).
+      messages: [{ address: Address.parse(info.sellerRaw).toString({ bounceable: false, testOnly: info.network === 'testnet' }), amount: info.amountRaw, payload: b64(comment(payload)) }],
     });
     return;
   }
@@ -128,7 +130,9 @@ async function sendPayment(info: Info, w: Wallet) {
     .endCell();
   await tc.sendTransaction({
     validUntil, network,
-    messages: [{ address: lookup.address, amount: toNano('0.05').toString(), payload: b64(body) }],
+    // Bounceable to the customer's own jetton wallet so a failed transfer refunds. 0.05 TON
+    // failed with exit 709 (not enough TON) on testnet; 0.1 works (excess is returned).
+    messages: [{ address: Address.parse(lookup.address).toString({ bounceable: true, testOnly: info.network === 'testnet' }), amount: toNano('0.1').toString(), payload: b64(body) }],
   });
 }
 

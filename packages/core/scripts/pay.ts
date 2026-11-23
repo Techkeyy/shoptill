@@ -18,15 +18,15 @@ const mAddr = friendly(merchant.address);
 const refId = () => Math.random().toString(36).slice(2, 8).replace(/[^a-z0-9]/g, 'x');
 const commentCell = (t: string) => beginCell().storeUint(0, 32).storeStringTail(t).endCell();
 
-async function sendMsg(to: Address, value: bigint, body: any) {
+async function sendMsg(to: Address, value: bigint, body: any, bounce: boolean) {
   const seqno = await retry(() => opened.getSeqno());
   await retry(() => opened.sendTransfer({
     seqno, secretKey: cust.kp.secretKey, sendMode: SendMode.PAY_GAS_SEPARATELY | SendMode.IGNORE_ERRORS,
-    messages: [internal({ to, value, bounce: true, body })],
+    messages: [internal({ to, value, bounce, body })],
   }));
 }
 async function sendNative(ref: string, amount: bigint) {
-  await sendMsg(merchant.address, amount, commentCell(`st:${ref}`));
+  await sendMsg(merchant.address, amount, commentCell(`st:${ref}`), false); // seller wallet may be uninit: non-bounceable
 }
 async function sendJetton(master: string, ref: string, amount: bigint) {
   const minter = c.open(JettonMinter.createFromAddress(Address.parse(master)));
@@ -35,7 +35,7 @@ async function sendJetton(master: string, ref: string, amount: bigint) {
     .storeAddress(merchant.address).storeAddress(cust.address).storeBit(0)
     .storeCoins(toNano('0.01'))
     .storeBit(1).storeRef(commentCell(`st:${ref}`)).endCell();
-  await sendMsg(jw, toNano('0.05'), body);
+  await sendMsg(jw, toNano('0.1'), body, true);
 }
 
 async function detect(kind: 'native' | 'jetton', ref: string, since: number): Promise<IncomingPayment[]> {

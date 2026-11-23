@@ -59,9 +59,13 @@ export class TonCenter {
       const op = m.opcode;
       if (op != null && Number(op) !== 0) continue; // jetton notification, excess, etc.
       const d = t.description ?? {};
-      const success =
-        d.aborted === false && d.compute_ph?.success !== false && d.action?.success !== false &&
-        m.bounced !== true;
+      // "Money stayed" rule. Do NOT use d.aborted: a payment to a never-used (uninit)
+      // wallet is credited but reported aborted (compute skipped: no_state). Money arrived
+      // iff the credit phase credited value and no bounce phase sent it back. Learned on
+      // testnet 2026-11-23 (evidence/p0-spike.md).
+      const credited = BigInt(d.credit_ph?.credit ?? 0) > 0n;
+      const bouncedBack = d.bounce != null && d.bounce.type !== 'negfunds' && d.bounce.type !== 'nofunds';
+      const success = credited && !bouncedBack && m.bounced !== true;
       out.push({
         txHash: t.hash, lt: String(t.lt), utime: t.now, success,
         from: normalizeAddress(m.source),

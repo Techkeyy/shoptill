@@ -17,10 +17,10 @@ const opened = c.open(cust.contract);
 const sdk = AssetsSDK.create({ api: c as any, sender: opened.sender(cust.kp.secretKey) });
 
 async function deploy(name: string, description: string) {
-  const minter = await retry(() => sdk.deployJetton(
+  const minter = await sdk.deployJetton(
     { name, symbol: 'USDT', decimals: 6, description },
     { onchainContent: true, premintAmount: 1_000_000_000n, adminAddress: cust.address, value: toNano('0.25') },
-  ));
+  );
   console.log(`${name} master`, friendly(minter.address, true));
   return minter;
 }

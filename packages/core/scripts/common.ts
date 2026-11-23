@@ -4,16 +4,35 @@ import { fileURLToPath } from 'node:url';
 import { Address } from '@ton/core';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import { TonClient, WalletContractV5R1 } from '@ton/ton';
+import axios from 'axios';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(here, '../../..');
 export const SECRETS = resolve(ROOT, '.secrets');
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Throttle every HTTP call (public TON Center allows ~1 rps) and retry 429s at the
+// HTTP layer, so a rate-limited sendBoc is retried instead of failing the script.
+let lastCall = 0;
+const GAP = process.env.TONCENTER_API_KEY ? 150 : 1300;
+const baseAdapter = axios.getAdapter(axios.defaults.adapter);
+const throttled = async (config: any): Promise<any> => {
+  for (let i = 0; ; i++) {
+    const wait = lastCall + GAP - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastCall = Date.now();
+    try { return await baseAdapter(config); } catch (e: any) {
+      if (e?.response?.status !== 429 || i >= 10) throw e;
+      await sleep(2000);
+    }
+  }
+};
+
 export function client() {
   return new TonClient({
     endpoint: 'https://testnet.toncenter.com/api/v2/jsonRPC',
     apiKey: process.env.TONCENTER_API_KEY,
+    httpAdapter: throttled as any,
   });
 }
 

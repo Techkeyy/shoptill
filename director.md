@@ -2,7 +2,9 @@
 
 Handover file. Any director can take over from here. Keep it current after every phase.
 
-**STATUS: BUILDING. Day 1 (2026-11-23). Nothing proven yet.**
+**STATUS: BUILDING. Day 1 (2026-11-23).**
+- **P0 PASSED: COMPONENT PROVEN.** 11/11 live testnet payments were classified correctly, max detection 3.6 s, and the fake USDT was caught (`evidence/p0-spike.md`).
+- Server, bot and pay page are built (68 tests) but **not yet run against real Telegram**. Not deployed.
 
 Last updated: 2026-11-23 by director (Claude Opus 5.5). Builders: Sonnet 5.5 (core), Haiku 5.5 (mechanical tasks).
 Research: `Desktop/skill/idea-research/even-realities-heads-up-idea-research.md` (the idea was called "Till" there; the owner renamed it **ShopTill**. "Shop Pay" was rejected because it is Shopify's trademark).
@@ -111,5 +113,12 @@ Two scans of one armed sale each get their own sub-reference. The first full pay
 
 ## Log
 
+- 2026-11-23: **P0 live spike passed** (11/11, ≤ 3.6 s). Three real-chain lessons came out of it, all fixed:
+  1. **A bounceable payment to a never-used seller wallet bounces back.** The pay page now sends GRAM non-bounceable (UQ/0Q form).
+  2. **A credited payment to an uninit wallet is reported `aborted: true`** (compute skipped: no_state). Core no longer uses `aborted`. Money arrived iff `credit_ph.credit > 0` and there is no `ok` bounce phase.
+  3. **0.05 TON attached to a jetton transfer failed with exit 709** (not enough TON). We now attach 0.1, and jetton sends stay bounceable so failures refund.
+
+  This is real-input evidence for the README: naive watchers would show these payments wrongly.
+- 2026-11-23: Bot @ShopTillBot is live (getMe OK). The Groq key works. TON Center without a key hits 429 quickly, so the scripts throttle at the HTTP layer (axios adapter). **Never wrap a send in a blind retry.**
 - 2026-11-23: VPS cleanup, approved by the owner: rotated logs, journal vacuumed to 50 MB, apt and npm caches, /root/.cache/webpack. Free space went from 644 MB to 2.1 GB. Docker images were KEPT because both are used by running containers (hermes-agent, checker-merchant). Caddy, OneScan and Docker are all still active.
 - 2026-11-23: Repo created. Idea locked (ShopTill). TON Center v3 testnet and TonAPI testnet are reachable. Template `evenhub-templates/asr` read. **Its STT key lives in the frontend; we route through our server instead.**

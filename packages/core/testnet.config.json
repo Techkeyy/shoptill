@@ -1,0 +1,7 @@
+{
+  "network": "testnet",
+  "allowlistedJettonMaster": "0:d3e29f83427765b4047f9046330a85cee880e55978265d89e896adb5cf16988c",
+  "allowlistedJettonMasterFriendly": "kQDT4p-DQndltAR_kEYzCoXO6IDlWXgmXYnolq21zxaYjEXT",
+  "decimals": 6,
+  "symbol": "USDT"
+}
