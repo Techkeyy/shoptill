@@ -4,7 +4,10 @@ Handover file. Any director can take over from here. Keep it current after every
 
 **STATUS: BUILDING. Day 1 (2026-11-23).**
 - **P0 PASSED: COMPONENT PROVEN.** 11/11 live testnet payments were classified correctly, max detection 3.6 s, and the fake USDT was caught (`evidence/p0-spike.md`).
-- Server, bot and pay page are built (68 tests) but **not yet run against real Telegram**. Not deployed.
+- **INTEGRATION PROVEN (USDT happy path), owner UAT 1:**
+  - The whole chain works: glasses → bot setup → arm → customer pays in Telegram → glasses PAID → receipt (`evidence/uat-1-first-payment.md`).
+  - Deployed on the VPS with a persistent DB.
+  - Untested: voice (STT), GRAM sale, SHORT/UNMATCHED/FAKE through the product, `/today`, the seller DM when the glasses are closed.
 
 Last updated: 2026-11-23 by director (Claude Opus 5.5). Builders: Sonnet 5.5 (core), Haiku 5.5 (mechanical tasks).
 Research: `Desktop/skill/idea-research/even-realities-heads-up-idea-research.md` (the idea was called "Till" there; the owner renamed it **ShopTill**. "Shop Pay" was rejected because it is Shopify's trademark).
