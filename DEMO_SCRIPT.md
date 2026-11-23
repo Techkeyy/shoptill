@@ -102,7 +102,7 @@ Everything on screen is the real product against the live server on TON testnet.
 
 **On screen**
 1. Tab F: the live-states table, 8 rows, hold 3 seconds. Caption: `8 of 8 edge states on real testnet`.
-2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `170 tests` (86 server, 21 glasses, 23 core).
+2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `170 tests` (93 server, 48 glasses, 29 core).
 3. Tab E: the first real owner payment (UAT 1) transaction.
 
 **Say**
