@@ -111,4 +111,5 @@ Two scans of one armed sale each get their own sub-reference. The first full pay
 
 ## Log
 
+- 2026-11-23: VPS cleanup, approved by the owner: rotated logs, journal vacuumed to 50 MB, apt and npm caches, /root/.cache/webpack. Free space went from 644 MB to 2.1 GB. Docker images were KEPT because both are used by running containers (hermes-agent, checker-merchant). Caddy, OneScan and Docker are all still active.
 - 2026-11-23: Repo created. Idea locked (ShopTill). TON Center v3 testnet and TonAPI testnet are reachable. Template `evenhub-templates/asr` read. **Its STT key lives in the frontend; we route through our server instead.**

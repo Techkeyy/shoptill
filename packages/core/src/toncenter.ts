@@ -31,7 +31,7 @@ export class TonCenter {
     for (const [k, v] of Object.entries(o.jettonDecimals ?? {})) this.decimals.set(normalizeAddress(k), v);
   }
 
-  private async get(path: string, params: Record<string, string | number>): Promise<any> {
+  async get(path: string, params: Record<string, string | number>): Promise<any> {
     const url = new URL(this.baseUrl + path);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
     for (let attempt = 0; attempt < 6; attempt++) {

@@ -1,0 +1,16 @@
+[Unit]
+Description=ShopTill server (API, Telegram bot, chain watcher)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/shoptill
+EnvironmentFile=/opt/shoptill/.env
+ExecStart=/usr/bin/node dist/server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

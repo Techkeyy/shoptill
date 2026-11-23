@@ -1,0 +1,24 @@
+{
+  "name": "@shoptill/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --external:node:* --banner:js=\"import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);\" --minify --outfile=dist/server.mjs",
+    "start": "node dist/server.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@shoptill/core": "*",
+    "@ton/core": "^0.63.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.5",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,66 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { TonCenter } from '@shoptill/core';
+import { createApi } from './api.ts';
+import { Bot } from './bot.ts';
+import { loadConfig, parseEnv } from './config.ts';
+import { openDb } from './db.ts';
+import { Till, type Chain } from './service.ts';
+import { BotApi } from './telegram.ts';
+
+for (const p of ['.env', 'server/.env']) {
+  if (existsSync(p)) {
+    for (const [k, v] of Object.entries(parseEnv(readFileSync(p, 'utf8')))) if (process.env[k] === undefined) process.env[k] = v;
+    break;
+  }
+}
+
+const cfg = loadConfig();
+if (!cfg.botToken) { console.error('TELEGRAM_BOT_TOKEN is not set'); process.exit(1); }
+if (!cfg.groqKey) console.log('warning: GROQ_API_KEY not set, /api/stt disabled');
+if (!cfg.usdt) console.log('no allowlisted jetton configured: GRAM only');
+
+const tc = new TonCenter({
+  apiKey: cfg.tonKey || undefined,
+  baseUrl: cfg.network === 'mainnet' ? 'https://toncenter.com/api/v3' : undefined,
+  jettonDecimals: cfg.jettonDecimals,
+});
+const chain: Chain = {
+  getIncomingTransactions: (a, s) => tc.getIncomingTransactions(a, s),
+  getJettonTransfersTo: (a, s) => tc.getJettonTransfersTo(a, s),
+  // shares the client's throttle (note: `get` is private in core)
+  raw: (path, params) => tc.get(path, params),
+};
+
+const db = openDb(cfg.dbPath);
+const tg = new BotApi(cfg.botToken);
+const svc = new Till({ db, cfg, ton: chain, tg });
+const bot = new Bot(svc, tg, cfg);
+const handle = createApi({ svc, bot, cfg });
+
+const server = createServer(async (req, res) => {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > 4_000_000) { res.writeHead(413).end(); return; }
+    chunks.push(c as Buffer);
+  }
+  const url = new URL(req.url ?? '/', 'http://x');
+  const headers: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(req.headers)) headers[k] = Array.isArray(v) ? v[0] : v;
+  const out = await handle({ method: req.method ?? 'GET', path: url.pathname, query: url.searchParams, headers, body: Buffer.concat(chunks) });
+  res.writeHead(out.status, out.headers).end(out.body);
+});
+
+server.listen(cfg.port, () => console.log(`shoptill listening on :${cfg.port} (${cfg.network})`));
+
+const signal = { stopped: false };
+await bot.init();
+console.log(`bot @${bot.username} ready`);
+svc.start();
+void bot.poll(signal);
+
+for (const s of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(s, () => { signal.stopped = true; svc.stop(); server.close(); process.exit(0); });
+}
