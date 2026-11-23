@@ -136,6 +136,13 @@ export class Till {
   linkCode(chat: number, code: string): number | null {
     const dev = one(this.d.db, 'SELECT * FROM devices WHERE code=? AND shop_id IS NULL AND code_at>?', code.toUpperCase(), this.nowMs() - CODE_TTL_MS);
     if (!dev) return null;
+    // A seller who already has a working shop (new glasses, reinstalled app) keeps it:
+    // same name, same wallet, and the printed counter QR keeps working.
+    const existing = this.sellerShop(chat);
+    if (existing?.stage === 'ready') {
+      run(this.d.db, 'UPDATE devices SET shop_id=? WHERE device_id=?', existing.id, dev.device_id);
+      return existing.id;
+    }
     const r = run(this.d.db, "INSERT INTO shops(seller_chat, stage, created_at) VALUES(?, 'name', ?)", chat, this.nowMs());
     const shopId = Number(r.lastInsertRowid);
     run(this.d.db, 'UPDATE devices SET shop_id=? WHERE device_id=?', shopId, dev.device_id);

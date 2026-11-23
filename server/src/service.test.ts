@@ -100,6 +100,14 @@ describe('pairing', () => {
     expect(svc.pair('d', a.deviceSecret)).toEqual({ paired: true, shopName: 'Cafe' });
     expect(() => svc.pair('d')).toThrow(/bad device secret/); // a paired device needs its secret
   });
+  it('re-pairing new glasses keeps the seller ready shop (same QR, same wallet)', async () => {
+    const { svc, shopId, tg, bot } = await setup();
+    const b = svc.pair('dev-2');
+    await bot.handle({ update_id: 1, message: { message_id: 1, chat: { id: 555, type: 'private' }, text: b.code! } } as any);
+    expect(svc.pair('dev-2', b.deviceSecret)).toEqual({ paired: true, shopName: 'Barber Bob' });
+    expect(svc.sellerShop(555)!.id).toBe(shopId);
+    expect(JSON.stringify(tg.sent.at(-1))).toMatch(/counter QR still works/);
+  });
   it('rejects a bad address', async () => {
     const { svc, shopId } = await setup();
     expect(() => svc.setShopAddress(shopId, 'not-an-address')).toThrow(HttpError);

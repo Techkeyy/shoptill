@@ -63,6 +63,11 @@ export class Bot {
       const linked = this.svc.tryLink(chat, code[0]);
       if (linked === 'locked') { await this.tg.send(chat, 'Too many wrong codes. Wait a few minutes and try again.'); return; }
       if (linked === 'bad') { await this.tg.send(chat, 'I do not know that code. Check the glasses and try again.'); return; }
+      const linkedShop = this.svc.shop(linked.shopId);
+      if (linkedShop?.stage === 'ready') {
+        await this.tg.send(chat, `Linked these glasses to "${linkedShop.name}". Same wallet, and your counter QR still works. Say a price to start.`);
+        return;
+      }
       await this.tg.send(chat, 'Linked. What is your shop called? (This is what customers see.)');
       return;
     }
