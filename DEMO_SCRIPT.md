@@ -102,11 +102,11 @@ Everything on screen is the real product against the live server on TON testnet.
 
 **On screen**
 1. Tab F: the live-states table, 8 rows, hold 3 seconds. Caption: `8 of 8 edge states on real testnet`.
-2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `280 real mainnet payments, 0 false PAID`, `130 tests` (86 server, 21 glasses, 23 core).
+2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, 0 false PAID`, `130 tests` (86 server, 21 glasses, 23 core).
 3. Tab E: the first real owner payment (UAT 1) transaction.
 
 **Say**
-> "Eight of eight edge states passed on real testnet: short, extra, duplicate, fake, late, and more, each with a transaction. And I replayed 280 real mainnet payments to busy wallets, read only. Zero false PAID."
+> "Eight of eight edge states passed on real testnet: short, extra, duplicate, fake, late, and more, each with a transaction. And I replayed 2,815 real mainnet payments to busy wallets, read only. Zero false PAID."
 
 ### Scene 7 · 2:45 to 2:55 · The honest close (stop on the last word)
 
@@ -141,7 +141,7 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 | Look-alike USDT with the right ref is FAKE | `evidence/live-states.md` row 5, tx https://testnet.tonviewer.com/transaction/f6d75e2a8150d5fd7f26b42781d845646ae7b68740643aa3f767f761362038d1; `evidence/p0-spike.md` row 11 |
 | 8 of 8 edge states on testnet | `evidence/live-states.md`, "Result: 8/8 as expected." |
 | 11/11 spike | `evidence/p0-spike.md`, "Correct: 11/11", max latency 3571 ms |
-| 280 real mainnet payments, 0 false PAID | `evidence/real-input.md`, "PASS: no false PAID on 280 real payments" |
+| 2,815 real mainnet payments, 0 false PAID | `evidence/real-input.md`, "PASS: no false PAID on 2815 real payments" |
 | 130 tests | server 86, glasses 21, core 23 (run on 2026-11-23) |
 | Never holds keys or funds | `evidence/security-audit.md`, question 6 |
 | Receipt arrives in Telegram | `evidence/uat-1-first-payment.md` (`receipt_sent=1`), shown live in Scene 4 |
