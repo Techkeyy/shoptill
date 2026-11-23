@@ -66,7 +66,22 @@ async function getDeviceId(): Promise<string> {
   try { await bridge.setLocalStorage('deviceId', id) } catch { /* non-fatal */ }
   return id
 }
-const deviceId = await getDeviceId()
+let deviceId = await getDeviceId()
+// Device secret: issued once by the server at first pair, required on every call afterwards.
+async function loadSecret() {
+  try { api.setDeviceSecret((await bridge.getLocalStorage('deviceSecret')) || '') } catch { /* none yet */ }
+}
+await loadSecret()
+async function saveSecret(s: string) {
+  api.setDeviceSecret(s)
+  try { await bridge.setLocalStorage('deviceSecret', s) } catch { /* non-fatal: server re-issues while unpaired */ }
+}
+/** The server refuses this device (paired, but our secret is gone): start over with a fresh identity. */
+async function resetIdentity() {
+  deviceId = crypto.randomUUID()
+  try { await bridge.setLocalStorage('deviceId', deviceId) } catch { /* ignore */ }
+  await saveSecret('')
+}
 
 // --- state ------------------------------------------------------------------
 type Mode = 'pair' | 'idle' | 'listening' | 'preset' | 'sale' | 'info'
@@ -94,10 +109,12 @@ function flash(text: string, hint?: string, ms = 2000, sub?: string) {
 async function doPair() {
   try {
     const r = await api.pair(deviceId)
+    if (r.deviceSecret) await saveSecret(r.deviceSecret)
     if (r.paired) return goIdle()
     mode = 'pair'
     void show({ v: 'pair', code: r.code })
-  } catch {
+  } catch (e) {
+    if (e instanceof api.NotPairedError) await resetIdentity()
     mode = 'pair'
     void show({ v: 'offline' })
   }

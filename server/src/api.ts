@@ -4,15 +4,19 @@ import { validateInitData, verifyToken, type TokenPayload } from './auth.ts';
 import { parseAmount } from './amount.ts';
 import type { Bot } from './bot.ts';
 import type { Config } from './config.ts';
+import { RateLimiter } from './ratelimit.ts';
 import { HttpError, type Till } from './service.ts';
 
-export interface Req { method: string; path: string; query: URLSearchParams; headers: Record<string, string | undefined>; body: Buffer }
+export interface Req { ip?: string; method: string; path: string; query: URLSearchParams; headers: Record<string, string | undefined>; body: Buffer }
 export interface Res { status: number; headers: Record<string, string>; body: string | Buffer }
 
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers': 'content-type, x-tg-init-data',
+  'access-control-allow-headers': 'content-type, x-tg-init-data, x-device-secret',
+  // tokens ride in the Mini App URL: never leak them via Referer; no MIME sniffing
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
   'access-control-max-age': '86400',
 };
 const MIME: Record<string, string> = {
@@ -29,6 +33,10 @@ export interface ApiDeps { svc: Till; bot: Bot; cfg: Config; fetchImpl?: typeof 
 export function createApi(d: ApiDeps) {
   const { svc, bot, cfg } = d;
   const doFetch = d.fetchImpl ?? fetch;
+  const pairLimit = new RateLimiter(120, 60_000);
+  const sttLimit = new RateLimiter(12, 60_000);
+  /** Every device call must present the device secret issued at first pair. */
+  const dev = (r: Req, id: string): string => { svc.authDevice(id, r.headers['x-device-secret']); return id; };
 
   const body = (r: Req): any => {
     if (!r.body.length) return {};
@@ -51,7 +59,8 @@ export function createApi(d: ApiDeps) {
   }
 
   async function stt(r: Req): Promise<Res> {
-    str(r.query.get('deviceId'), 'deviceId');
+    const did = dev(r, str(r.query.get('deviceId'), 'deviceId'));
+    if (!sttLimit.hit(did, Date.now())) throw new HttpError(429, 'too many requests');
     if (!cfg.groqKey) throw new HttpError(501, 'stt not configured');
     if (!r.body.length || r.body.length > 3_000_000) throw new HttpError(400, 'bad audio');
     const form = new FormData();
@@ -97,27 +106,30 @@ export function createApi(d: ApiDeps) {
         case 'GET /healthz': return json(200, { ok: true });
         case 'GET /tonconnect-manifest.json':
           return json(200, { url: cfg.publicUrl, name: 'ShopTill', iconUrl: `${cfg.publicUrl}/icon.png` });
-        case 'POST /api/device/pair': return json(200, svc.pair(str(body(r).deviceId, 'deviceId')));
+        case 'POST /api/device/pair': {
+          if (!pairLimit.hit(r.ip ?? '?', Date.now())) throw new HttpError(429, 'too many requests');
+          return json(200, svc.pair(str(body(r).deviceId, 'deviceId'), r.headers['x-device-secret']));
+        }
         case 'POST /api/till/arm': {
           const b = body(r);
-          return json(200, svc.arm(str(b.deviceId, 'deviceId'), str(b.amount, 'amount'), str(b.asset, 'asset')));
+          return json(200, svc.arm(dev(r, str(b.deviceId, 'deviceId')), str(b.amount, 'amount'), str(b.asset, 'asset')));
         }
-        case 'GET /api/till/status': return json(200, svc.status(str(r.query.get('deviceId'), 'deviceId')));
+        case 'GET /api/till/status': return json(200, svc.status(dev(r, str(r.query.get('deviceId'), 'deviceId'))));
         case 'POST /api/till/void': {
           const b = body(r);
-          svc.void(str(b.deviceId, 'deviceId'), str(b.saleId, 'saleId'));
+          svc.void(dev(r, str(b.deviceId, 'deviceId')), str(b.saleId, 'saleId'));
           return json(200, { ok: true });
         }
         case 'POST /api/till/receipt': {
           const b = body(r);
-          return json(200, { ok: true, ...(await svc.receipt(str(b.deviceId, 'deviceId'), str(b.saleId, 'saleId'))) });
+          return json(200, { ok: true, ...(await svc.receipt(dev(r, str(b.deviceId, 'deviceId')), str(b.saleId, 'saleId'))) });
         }
         case 'POST /api/till/attach': {
           const b = body(r);
-          svc.attach(str(b.deviceId, 'deviceId'), str(b.saleId, 'saleId'), str(b.paymentId, 'paymentId'));
+          svc.attach(dev(r, str(b.deviceId, 'deviceId')), str(b.saleId, 'saleId'), str(b.paymentId, 'paymentId'));
           return json(200, { ok: true });
         }
-        case 'GET /api/today': return json(200, svc.today(str(r.query.get('deviceId'), 'deviceId')));
+        case 'GET /api/today': return json(200, svc.today(dev(r, str(r.query.get('deviceId'), 'deviceId'))));
         case 'POST /api/stt': return await stt(r);
         case 'GET /api/pay/info': {
           const ref = str(r.query.get('ref'), 'ref');
@@ -142,7 +154,9 @@ export function createApi(d: ApiDeps) {
         case 'POST /api/shop/address': {
           const b = body(r);
           const t = authMini(r, 'setup', str(b.t, 't'));
-          svc.setShopAddress(t.shop!, str(b.address, 'address'));
+          // the token must belong to this shop's own seller chat (defence in depth)
+          if (!t.shop || svc.shop(t.shop)?.seller_chat !== t.chat) throw new HttpError(401, 'bad setup link');
+          svc.setShopAddress(t.shop, str(b.address, 'address'));
           void bot.finishSetup(t.shop!).catch((e) => console.log(`finishSetup error: ${(e as Error).message}`));
           return json(200, { ok: true });
         }

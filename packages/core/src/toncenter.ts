@@ -46,13 +46,30 @@ export class TonCenter {
     throw new Error('toncenter: retries exhausted');
   }
 
+  /**
+   * Fetch every row since `start_utime`, page by page. A single 100-row page silently
+   * dropped payments on busy wallets (real-input run, evidence/real-input.md).
+   * Capped at maxPages so a pathological wallet can't stall the watcher.
+   */
+  async getAllPages(path: string, key: string, params: Record<string, string | number>, maxPages = 10): Promise<any[]> {
+    const LIMIT = 100;
+    const rows: any[] = [];
+    for (let page = 0; page < maxPages; page++) {
+      const j = await this.get(path, { ...params, limit: LIMIT, offset: page * LIMIT });
+      const got: any[] = j[key] ?? [];
+      rows.push(...got);
+      if (got.length < LIMIT) break;
+    }
+    return rows;
+  }
+
   /** Native incoming transfers (plain value transfers; jetton notifications/excess are excluded). */
   async getIncomingTransactions(address: string, sinceUtime: number): Promise<IncomingPayment[]> {
-    const j = await this.get('/transactions', {
-      account: address, start_utime: sinceUtime, sort: 'desc', limit: 100,
+    const txs = await this.getAllPages('/transactions', 'transactions', {
+      account: address, start_utime: sinceUtime, sort: 'desc',
     });
     const out: IncomingPayment[] = [];
-    for (const t of j.transactions ?? []) {
+    for (const t of txs) {
       const m = t.in_msg;
       if (!m || !m.source) continue; // external or none
       if (t.finality && t.finality !== 'finalized') continue;
@@ -79,11 +96,11 @@ export class TonCenter {
   }
 
   async getJettonTransfersTo(ownerAddress: string, sinceUtime: number): Promise<IncomingPayment[]> {
-    const j = await this.get('/jetton/transfers', {
-      owner_address: ownerAddress, direction: 'in', start_utime: sinceUtime, sort: 'desc', limit: 100,
+    const rows = await this.getAllPages('/jetton/transfers', 'jetton_transfers', {
+      owner_address: ownerAddress, direction: 'in', start_utime: sinceUtime, sort: 'desc',
     });
     const out: IncomingPayment[] = [];
-    for (const t of j.jetton_transfers ?? []) {
+    for (const t of rows) {
       const master = normalizeAddress(t.jetton_master);
       out.push({
         txHash: t.transaction_hash, lt: String(t.transaction_lt), utime: t.transaction_now,

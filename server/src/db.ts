@@ -19,7 +19,9 @@ export function openDb(path: string): DB {
       code TEXT,
       shop_id INTEGER,
       last_poll INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      secret_hash TEXT,
+      code_at INTEGER
     );
     CREATE TABLE IF NOT EXISTS sales (
       id TEXT PRIMARY KEY,
@@ -62,6 +64,10 @@ export function openDb(path: string): DB {
     );
     CREATE INDEX IF NOT EXISTS payments_shop ON payments(shop_id, sale_id);
   `);
+  // migrate databases created before device secrets / code expiry existed
+  const cols = (db.prepare('PRAGMA table_info(devices)').all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes('secret_hash')) db.exec('ALTER TABLE devices ADD COLUMN secret_hash TEXT');
+  if (!cols.includes('code_at')) db.exec('ALTER TABLE devices ADD COLUMN code_at INTEGER');
   return db;
 }
 

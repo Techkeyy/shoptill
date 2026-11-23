@@ -11,6 +11,11 @@ Handover file. Any director can take over from here. Keep it current after every
   - **Voice proven at component level** (TTS WAVs → live /api/stt, including 12.50 and GRAM).
   - Untested: voice through the simulator mic, `/today`, the seller DM when the glasses are closed, and a real-input read-only run on a busy mainnet address.
 
+**Real-input run** (`evidence/real-input.md`): 280 real mainnet payments to 2 busy wallets over 24 h → 0 false PAID, 0 false FAKE. Gaps found:
+- (a) The core client reads only one 100-row page, so a busy seller wallet could miss payments. **TODO: paginate** (after the audit, same file).
+- (b) The spam sample is thin (1 row). Re-run on a spam-heavy personal wallet.
+- (c) During an open sale, every unrelated incoming transfer shows as UNMATCHED. That is by design (the seller can ignore it or attach it); disclose.
+
 **Next (day 2):**
 1. Real-input run (mainnet read-only).
 2. Seller-DM and /today check.

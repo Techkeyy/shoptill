@@ -90,14 +90,15 @@ describe('pairing', () => {
     const svc = new Till({ db: openDb(':memory:'), cfg: cfg(), ton: chain, tg: new FakeTg(), now: () => T0 * 1000, log: () => {} });
     const a = svc.pair('d');
     expect(a.paired).toBe(false);
-    expect(a.code).toMatch(/^TILL-\d{4}$/);
-    expect(svc.pair('d').code).toBe(a.code);
+    expect(a.code).toMatch(/^TILL-\d{6}$/);
+    expect(svc.pair('d', a.deviceSecret).code).toBe(a.code);
     const shop = svc.linkCode(1, a.code!)!;
     expect(svc.linkCode(2, a.code!)).toBeNull(); // single use
     svc.setShopName(shop, 'Cafe');
-    expect(svc.pair('d').paired).toBe(false); // wallet not yet connected
+    expect(svc.pair('d', a.deviceSecret).paired).toBe(false); // wallet not yet connected
     svc.setShopAddress(shop, SELLER.toRawString());
-    expect(svc.pair('d')).toEqual({ paired: true, shopName: 'Cafe' });
+    expect(svc.pair('d', a.deviceSecret)).toEqual({ paired: true, shopName: 'Cafe' });
+    expect(() => svc.pair('d')).toThrow(/bad device secret/); // a paired device needs its secret
   });
   it('rejects a bad address', async () => {
     const { svc, shopId } = await setup();
@@ -371,9 +372,10 @@ describe('full flow (fake toncenter + fake telegram, through the HTTP handler)',
     const bot = new Bot(svc, tg, c, () => {});
     await bot.init();
     const api = createApi({ svc, bot, cfg: c });
+    let secret = '';
     const call = async (method: string, path: string, body?: unknown, headers: Record<string, string> = {}) => {
       const u = new URL(path, 'http://x');
-      const r = await api({ method, path: u.pathname, query: u.searchParams, headers, body: body ? Buffer.from(JSON.stringify(body)) : Buffer.alloc(0) });
+      const r = await api({ method, path: u.pathname, query: u.searchParams, headers: { ...(secret ? { 'x-device-secret': secret } : {}), ...headers }, body: body ? Buffer.from(JSON.stringify(body)) : Buffer.alloc(0) });
       return { status: r.status, json: r.body && String(r.headers['content-type']).includes('json') ? JSON.parse(String(r.body)) : null };
     };
     const msg = (chat: number, text: string): Update => ({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, text } });
@@ -381,6 +383,8 @@ describe('full flow (fake toncenter + fake telegram, through the HTTP handler)',
     // glasses pair
     const pair = (await call('POST', '/api/device/pair', { deviceId: 'g1' })).json;
     expect(pair.code).toMatch(/^TILL-/);
+    secret = pair.deviceSecret;
+    expect(secret).toBeTruthy();
     // seller onboards via the bot
     await bot.handle(msg(900, pair.code));
     await bot.handle(msg(900, 'Coffee Cart'));

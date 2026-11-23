@@ -9,6 +9,8 @@ User=root
 WorkingDirectory=/opt/shoptill
 EnvironmentFile=/opt/shoptill/.env
 ExecStart=/usr/bin/node dist/server.mjs
+NoNewPrivileges=true
+PrivateTmp=true
 Restart=always
 RestartSec=3
 

@@ -40,21 +40,31 @@ const bot = new Bot(svc, tg, cfg);
 const handle = createApi({ svc, bot, cfg });
 
 const server = createServer(async (req, res) => {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const c of req) {
-    size += (c as Buffer).length;
-    if (size > 4_000_000) { res.writeHead(413).end(); return; }
-    chunks.push(c as Buffer);
+  try {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const c of req) {
+      size += (c as Buffer).length;
+      if (size > 4_000_000) { res.writeHead(413).end(); return; }
+      chunks.push(c as Buffer);
+    }
+    const url = new URL(req.url ?? '/', 'http://x');
+    const headers: Record<string, string | undefined> = {};
+    for (const [k, v] of Object.entries(req.headers)) headers[k] = Array.isArray(v) ? v[0] : v;
+    // Caddy (the only thing that can reach this socket) sets x-forwarded-for to the real client.
+    const ip = (headers['x-forwarded-for'] ?? '').split(',')[0]?.trim() || req.socket.remoteAddress || '?';
+    const out = await handle({ method: req.method ?? 'GET', path: url.pathname, query: url.searchParams, headers, body: Buffer.concat(chunks), ip });
+    res.writeHead(out.status, out.headers).end(out.body);
+  } catch (e) {
+    // A client that aborts mid-body or sends a malformed URL must not take the process down.
+    console.log(`request error: ${(e as Error).message}`);
+    if (!res.headersSent) res.writeHead(400).end(); else res.destroy();
   }
-  const url = new URL(req.url ?? '/', 'http://x');
-  const headers: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(req.headers)) headers[k] = Array.isArray(v) ? v[0] : v;
-  const out = await handle({ method: req.method ?? 'GET', path: url.pathname, query: url.searchParams, headers, body: Buffer.concat(chunks) });
-  res.writeHead(out.status, out.headers).end(out.body);
 });
+process.on('unhandledRejection', (e) => console.log(`unhandled rejection: ${(e as Error)?.message ?? e}`));
 
-server.listen(cfg.port, () => console.log(`shoptill listening on :${cfg.port} (${cfg.network})`));
+// Loopback only: Caddy is the public face, and rate limits trust its x-forwarded-for.
+server.listen(cfg.port, '127.0.0.1', () => console.log(`shoptill listening on 127.0.0.1:${cfg.port} (${cfg.network})`));
 
 const signal = { stopped: false };
 await bot.init();

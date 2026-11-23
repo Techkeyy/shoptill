@@ -4,6 +4,11 @@ import * as mock from './mock'
 export const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8787'
 const MOCK = import.meta.env.VITE_MOCK === '1'
 
+/** Random per-device secret issued by the server at first pair; sent on every call (deviceId alone is not enough). */
+let deviceSecret = ""
+export const setDeviceSecret = (s: string) => { deviceSecret = s }
+const authHeader = (): Record<string, string> => (deviceSecret ? { "x-device-secret": deviceSecret } : {})
+
 export class NetError extends Error {}
 /** Server no longer knows this device (403) or its shop setup is unfinished (409): re-pair. */
 export class NotPairedError extends Error {}
@@ -14,7 +19,7 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
   try {
     res = await fetch(API + path, {
       method,
-      headers: body ? { 'content-type': 'application/json' } : undefined,
+      headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...authHeader() },
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch (e) { throw new NetError(String(e)) }
@@ -26,7 +31,7 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
 const q = (id: string) => `?deviceId=${encodeURIComponent(id)}`
 
 export const pair = (deviceId: string) =>
-  call<{ paired: boolean; code?: string; shopName?: string }>('POST', '/api/device/pair', { deviceId })
+  call<{ paired: boolean; code?: string; shopName?: string; deviceSecret?: string }>('POST', '/api/device/pair', { deviceId })
 export const arm = (deviceId: string, amount: string, asset: 'USDT' | 'GRAM') =>
   call<{ saleId: string }>('POST', '/api/till/arm', { deviceId, amount, asset })
 export const status = (deviceId: string) =>
@@ -44,7 +49,7 @@ export async function stt(deviceId: string, wav: Uint8Array): Promise<{ text: st
   if (MOCK) return mock.stt()
   let res: Response
   try {
-    res = await fetch(`${API}/api/stt${q(deviceId)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: new Blob([wav as BlobPart], { type: "audio/wav" }) })
+    res = await fetch(`${API}/api/stt${q(deviceId)}`, { method: 'POST', headers: { 'content-type': 'audio/wav', ...authHeader() }, body: new Blob([wav as BlobPart], { type: "audio/wav" }) })
   } catch (e) { throw new NetError(String(e)) }
   if (res.status === 403 || res.status === 409) throw new NotPairedError(`HTTP ${res.status}`)
   if (!res.ok) throw new NetError(`HTTP ${res.status}`)

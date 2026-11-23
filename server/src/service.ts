@@ -1,10 +1,11 @@
-import { randomBytes, randomInt } from 'node:crypto';
+import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { Address } from '@ton/core';
 import { classify, parseRef, normalizeAddress } from '@shoptill/core';
 import type { Allowlist, IncomingPayment, Sale, SaleResult } from '@shoptill/core';
 import { formatMoney, toRaw, type AssetName } from './amount.ts';
 import type { Config } from './config.ts';
 import { all, one, run, type DB } from './db.ts';
+import { RateLimiter } from './ratelimit.ts';
 import type { Tg } from './telegram.ts';
 
 export interface Chain {
@@ -25,6 +26,9 @@ const NOTIFY_STATES = new Set(['PAID', 'SHORT', 'EXTRA', 'DUPLICATE', 'FAKE', 'U
 const SALE_TTL = 15 * 60;
 const LIVE_WINDOW = 30 * 60;
 const GLASSES_ACTIVE_MS = 10_000;
+/** A pairing code is only valid while the glasses are showing it (they re-ask every few seconds). */
+const CODE_TTL_MS = 30 * 60 * 1000;
+const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 const alnum = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const randId = (n: number) => Array.from(randomBytes(n), (b) => alnum[b % alnum.length]).join('');
@@ -65,31 +69,70 @@ export class Till {
 
   // ---------- devices & onboarding ----------
 
-  pair(deviceId: string): { paired: boolean; code?: string; shopName?: string } {
+  /**
+   * Glasses call this until paired. The first call for a new device mints a random device
+   * secret (returned once as `deviceSecret`; only its hash is stored). Every other device call
+   * must present it (`authDevice`), so a leaked deviceId alone controls nothing.
+   */
+  pair(deviceId: string, secret?: string): { paired: boolean; code?: string; shopName?: string; deviceSecret?: string } {
     if (!deviceId) throw new HttpError(400, 'deviceId required');
+    let issued: string | undefined;
+    const issue = () => { issued = randomBytes(24).toString('base64url'); return sha256(issued); };
     let dev = one(this.d.db, 'SELECT * FROM devices WHERE device_id=?', deviceId);
     if (!dev) {
-      run(this.d.db, 'INSERT INTO devices(device_id, created_at) VALUES(?,?)', deviceId, this.nowMs());
-      dev = one(this.d.db, 'SELECT * FROM devices WHERE device_id=?', deviceId);
+      run(this.d.db, 'INSERT INTO devices(device_id, created_at, secret_hash) VALUES(?,?,?)', deviceId, this.nowMs(), issue());
+    } else if (!this.secretOk(dev, secret)) {
+      // Legacy rows (no secret yet) and still-unpaired devices may (re)receive a secret; a paired
+      // device with a wrong or missing secret is refused.
+      if (dev.shop_id && dev.secret_hash) throw new HttpError(403, 'bad device secret');
+      run(this.d.db, 'UPDATE devices SET secret_hash=? WHERE device_id=?', issue(), deviceId);
     }
+    dev = one(this.d.db, 'SELECT * FROM devices WHERE device_id=?', deviceId);
+    const withSecret = <T extends object>(o: T) => (issued ? { ...o, deviceSecret: issued } : o);
     const shop = dev.shop_id ? one(this.d.db, 'SELECT * FROM shops WHERE id=?', dev.shop_id) : undefined;
-    if (shop && shop.stage === 'ready') return { paired: true, shopName: shop.name };
-    if (!dev.code) {
+    if (shop && shop.stage === 'ready') return withSecret({ paired: true, shopName: shop.name });
+    if (!dev.code || !dev.code_at || this.nowMs() - dev.code_at > CODE_TTL_MS) {
       for (let i = 0; i < 50; i++) {
-        const code = `TILL-${randInt4()}`;
+        const code = `TILL-${randInt6()}`;
         if (!one(this.d.db, 'SELECT 1 FROM devices WHERE code=?', code)) {
-          run(this.d.db, 'UPDATE devices SET code=? WHERE device_id=?', code, deviceId);
+          run(this.d.db, 'UPDATE devices SET code=?, code_at=? WHERE device_id=?', code, this.nowMs(), deviceId);
           dev.code = code;
           break;
         }
       }
     }
-    return { paired: false, code: dev.code };
+    return withSecret({ paired: false, code: dev.code });
   }
 
-  /** Seller sent a pairing code to the bot. Returns the new shop id, or null if the code is unknown/used. */
+  private secretOk(dev: any, secret?: string): boolean {
+    if (!dev?.secret_hash || !secret) return false;
+    const a = Buffer.from(sha256(secret)), b = Buffer.from(dev.secret_hash);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  /** Throws 403 unless (deviceId, secret) is a known device. Same error for unknown and wrong. */
+  authDevice(deviceId: string, secret: string | undefined): void {
+    const dev = one(this.d.db, 'SELECT * FROM devices WHERE device_id=?', deviceId);
+    if (!dev || !this.secretOk(dev, secret)) throw new HttpError(403, 'device not paired');
+  }
+
+  private linkFails = new RateLimiter(5, 10 * 60_000);
+  private linkFailsAll = new RateLimiter(100, 10 * 60_000, 1);
+
+  /** Rate-limited pairing from the bot. 'locked' = too many wrong codes (per chat or globally). */
+  tryLink(chat: number, code: string): { shopId: number } | 'bad' | 'locked' {
+    const now = this.nowMs();
+    if (this.linkFails.blocked(String(chat), now) || this.linkFailsAll.blocked('*', now)) return 'locked';
+    const shopId = this.linkCode(chat, code);
+    if (shopId !== null) return { shopId };
+    this.linkFails.hit(String(chat), now);
+    this.linkFailsAll.hit('*', now);
+    return 'bad';
+  }
+
+  /** Seller sent a pairing code to the bot. Returns the new shop id, or null if the code is unknown, used or expired. */
   linkCode(chat: number, code: string): number | null {
-    const dev = one(this.d.db, 'SELECT * FROM devices WHERE code=? AND shop_id IS NULL', code.toUpperCase());
+    const dev = one(this.d.db, 'SELECT * FROM devices WHERE code=? AND shop_id IS NULL AND code_at>?', code.toUpperCase(), this.nowMs() - CODE_TTL_MS);
     if (!dev) return null;
     const r = run(this.d.db, "INSERT INTO shops(seller_chat, stage, created_at) VALUES(?, 'name', ?)", chat, this.nowMs());
     const shopId = Number(r.lastInsertRowid);
@@ -286,8 +329,10 @@ export class Till {
       s.state === 'EXTRA' ? `(you sent ${this.money(s, s.paid_raw)}, ${this.money(s, s.extra_raw)} extra)` : '',
       when, s.paid_tx ? `Tx: ${tonviewerLink(s.paid_tx)}` : '',
     ].filter(Boolean);
-    await this.d.tg.send(chat, lines.join('\n'));
+    // claim first so a double tap cannot send two receipts; release if Telegram fails
     run(this.d.db, 'UPDATE sales SET receipt_sent=1 WHERE id=?', saleId);
+    try { await this.d.tg.send(chat, lines.join('\n')); }
+    catch (e) { run(this.d.db, 'UPDATE sales SET receipt_sent=0 WHERE id=?', saleId); throw e; }
     return { sent: true };
   }
 
@@ -447,6 +492,6 @@ export class Till {
   }
 }
 
-function randInt4() { return String(randInt(1000, 10000)); }
+function randInt6() { return String(randInt(100000, 1000000)); }
 function randInt(a: number, b: number) { return randomInt(a, b); }
 export { normalizeAddress };

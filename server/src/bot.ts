@@ -15,7 +15,7 @@ const HELP = [
   '/wallet - connect or change the wallet that receives payments',
   '/help - this message',
   '',
-  'To set up: send me the code shown on your glasses (like TILL-1234).',
+  'To set up: send me the code shown on your glasses (like TILL-123456).',
 ].join('\n');
 
 export class Bot {
@@ -45,7 +45,7 @@ export class Bot {
       const payload = start[1];
       const shopM = payload ? /^shop_(\d+)$/.exec(payload) : null;
       if (shopM) return this.customerStart(chat, Number(shopM[1]));
-      await this.tg.send(chat, 'Welcome to ShopTill. Send me the code shown on your glasses (like TILL-1234).');
+      await this.tg.send(chat, 'Welcome to ShopTill. Send me the code shown on your glasses (like TILL-123456).');
       return;
     }
     if (/^\/help(?:@\w+)?$/.test(text)) { await this.tg.send(chat, HELP); return; }
@@ -53,15 +53,16 @@ export class Bot {
     if (/^\/history(?:@\w+)?$/.test(text)) return this.cmdHistory(chat);
     if (/^\/wallet(?:@\w+)?$/.test(text)) {
       const s = this.svc.sellerShop(chat);
-      if (!s || s.stage === 'name') { await this.tg.send(chat, 'First send me the code shown on your glasses (like TILL-1234).'); return; }
+      if (!s || s.stage === 'name') { await this.tg.send(chat, 'First send me the code shown on your glasses (like TILL-123456).'); return; }
       await this.sendWalletPrompt(chat, s.id, s.name);
       return;
     }
 
-    const code = /^TILL-\d{4}$/i.exec(text);
+    const code = /^TILL-\d{4,6}$/i.exec(text);
     if (code) {
-      const shopId = this.svc.linkCode(chat, code[0]);
-      if (shopId === null) { await this.tg.send(chat, 'I do not know that code. Check the glasses and try again.'); return; }
+      const linked = this.svc.tryLink(chat, code[0]);
+      if (linked === 'locked') { await this.tg.send(chat, 'Too many wrong codes. Wait a few minutes and try again.'); return; }
+      if (linked === 'bad') { await this.tg.send(chat, 'I do not know that code. Check the glasses and try again.'); return; }
       await this.tg.send(chat, 'Linked. What is your shop called? (This is what customers see.)');
       return;
     }
