@@ -1,0 +1,6 @@
+{
+  "name": "shoptill",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*", "server"]
+}

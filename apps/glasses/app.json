@@ -1,0 +1,17 @@
+{
+  "package_id": "com.shoptill.glasses",
+  "edition": "202601",
+  "name": "ShopTill",
+  "version": "0.1.0",
+  "min_sdk_version": "0.0.16",
+  "entrypoint": "index.html",
+  "permissions": [
+    { "name": "g2-microphone", "desc": "Hear the price you say aloud so the till can be armed hands-free." },
+    {
+      "name": "network",
+      "desc": "Talk to the ShopTill server to check payment status.",
+      "whitelist": ["https://shoptill.103-195-188-198.sslip.io"]
+    }
+  ],
+  "supported_languages": ["en"]
+}
