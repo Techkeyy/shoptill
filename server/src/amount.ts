@@ -96,8 +96,15 @@ export function parseAmount(text: string): { amount: string | null; asset: Asset
   // digits path
   const digitIdx = rawTokens.findIndex((t) => /^\d/.test(t));
   if (digitIdx >= 0) {
-    const n = Number(rawTokens[digitIdx]);
-    return { amount: tidy(n), asset: finalAsset };
+    const first = rawTokens[digitIdx]!;
+    // "12 50" / "12 dollars 50" / "12 and 50 cents": a whole number followed by a 2-digit cents group
+    if (/^\d+$/.test(first)) {
+      let j = digitIdx + 1;
+      while (j < rawTokens.length && (USDT_WORDS.has(rawTokens[j]!) || rawTokens[j] === 'and')) j++;
+      const next = rawTokens[j];
+      if (next && /^\d{2}$/.test(next)) return { amount: tidy(Number(first) + Number(next) / 100), asset: finalAsset };
+    }
+    return { amount: tidy(Number(first)), asset: finalAsset };
   }
 
   // words path: drop asset and filler words (dollars between groups act as a separator)

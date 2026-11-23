@@ -25,6 +25,7 @@ export type View =
   | { v: 'today'; count: number; total: string; asset: string }
   | { v: 'sale'; status: Status; confirmAttach?: boolean }
   | { v: 'preset'; amount: number; asset: string }
+  | { v: 'confirm'; amount: string; asset: string; heard: string }
 
 export const PRESETS = [5, 10, 12, 20, 50]
 export const HINT_IDLE = `tap: speak  ${G.sep}  swipe: presets  ${G.sep}  2x tap: exit`
@@ -120,6 +121,11 @@ export function render(view: View): Screen {
     case 'today': sc = { l1: `Today: ${view.count} sales ${G.sep} ${view.total}`, l2: view.asset, l3: 'swipe up: back' }; break
     case 'msg': sc = { l1: view.text, l2: view.sub ?? '', l3: view.hint ?? 'tap: ok' }; break
     case 'sale': sc = renderSale(view.status, view.confirmAttach); break
+    case 'confirm': sc = {
+      l1: `Heard  ${view.amount} ${view.asset}`,
+      l2: view.heard ? `you said: "${view.heard}"` : '',
+      l3: `tap: start sale ${G.sep} 2x tap: say again`,
+    }; break
   }
   const out = { l1: clip(sc.l1), l2: clip(sc.l2), l3: clip(sc.l3) }
   const total = out.l1.length + out.l2.length + out.l3.length

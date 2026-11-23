@@ -78,6 +78,8 @@ export function createApi(d: ApiDeps) {
     const j: any = await res.json();
     const text = String(j.text ?? '').trim();
     const p = parseAmount(text);
+    // Price words only (no audio kept): lets us see misreads during testing.
+    console.log(`stt heard ${JSON.stringify(text.slice(0, 80))} -> ${p.amount ?? 'none'} ${p.asset}`);
     return json(200, { text, amount: p.amount, asset: p.asset });
   }
 

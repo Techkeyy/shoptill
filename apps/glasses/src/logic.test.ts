@@ -94,3 +94,13 @@ describe('screens', () => {
   it('idle hint matches design', () => expect(render({ v: 'idle' }).l1).toBe('Say a price'))
   it('pair shows code', () => expect(render({ v: 'pair', code: 'TILL-4821' }).l2).toBe('Pair: send TILL-4821 to @ShopTillBot'))
 })
+
+describe('voice confirm screen', () => {
+  it('shows the heard price and transcript before any sale starts', () => {
+    const sc = render({ v: 'confirm', amount: '12.50', asset: 'USDT', heard: 'twelve fifty' })
+    expect(sc.l1).toBe('Heard  12.50 USDT')
+    expect(sc.l2).toBe('you said: "twelve fifty"')
+    expect(sc.l3).toMatch(/tap: start sale/)
+    expect(sc.l3).toMatch(/2x tap: say again/)
+  })
+})
