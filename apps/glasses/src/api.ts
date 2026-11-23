@@ -5,6 +5,8 @@ export const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'htt
 const MOCK = import.meta.env.VITE_MOCK === '1'
 
 export class NetError extends Error {}
+/** Server no longer knows this device (403) or its shop setup is unfinished (409): re-pair. */
+export class NotPairedError extends Error {}
 
 async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   if (MOCK) return mock.handle(path, body) as T
@@ -16,6 +18,7 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch (e) { throw new NetError(String(e)) }
+  if (res.status === 403 || res.status === 409) throw new NotPairedError(`HTTP ${res.status}`)
   if (!res.ok) throw new NetError(`HTTP ${res.status}`)
   return (await res.json()) as T
 }
@@ -43,6 +46,7 @@ export async function stt(deviceId: string, wav: Uint8Array): Promise<{ text: st
   try {
     res = await fetch(`${API}/api/stt${q(deviceId)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: new Blob([wav as BlobPart], { type: "audio/wav" }) })
   } catch (e) { throw new NetError(String(e)) }
+  if (res.status === 403 || res.status === 409) throw new NotPairedError(`HTTP ${res.status}`)
   if (!res.ok) throw new NetError(`HTTP ${res.status}`)
   return res.json()
 }

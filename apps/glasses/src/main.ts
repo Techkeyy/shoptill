@@ -1,5 +1,6 @@
 // Started from even-realities/evenhub-templates/asr (see ORIGIN.md).
 import {
+  RebuildPageContainer,
   waitForEvenAppBridge,
   TextContainerProperty,
   CreateStartUpPageContainer,
@@ -24,17 +25,27 @@ const mk = (id: number, name: string, y: number, h: number, content: string, cap
     paddingLength: 6, containerID: id, containerName: name, content, isEventCapture: cap,
   })
 // Exactly one capture container (the big status word).
+const layout = () => [mk(1, 'l1', 0, 110, 'ShopTill', 1), mk(2, 'l2', 110, 90, ''), mk(3, 'l3', 200, 88, '')]
 const created = await bridge.createStartUpPageContainer(
-  new CreateStartUpPageContainer({
-    containerTotalNum: 3,
-    textObject: [mk(1, 'l1', 0, 110, 'ShopTill', 1), mk(2, 'l2', 110, 90, ''), mk(3, 'l3', 200, 88, '')],
-  }),
+  new CreateStartUpPageContainer({ containerTotalNum: 3, textObject: layout() }),
 )
-if (created !== 0) console.error('createStartUpPageContainer failed', created)
+if (created !== 0) {
+  // The page already exists (app reloaded in the same host session): rebuild it so no
+  // stale text from the previous run stays on screen.
+  console.warn('createStartUpPageContainer returned', created, '- rebuilding page')
+  await bridge.rebuildPageContainer(new RebuildPageContainer({ containerTotalNum: 3, textObject: layout() }))
+}
 
 // --- rendering: textContainerUpgrade only for lines that changed -----------
 const shown: Screen = { l1: 'ShopTill', l2: '', l3: '' }
-async function show(view: View) {
+// Serialize renders: overlapping show() calls raced and left a stale line on screen
+// (UAT 2026-11-23: "Offline" title stuck above the pairing code).
+let renderChain: Promise<void> = Promise.resolve()
+function show(view: View): Promise<void> {
+  renderChain = renderChain.then(() => paint(view)).catch(() => {})
+  return renderChain
+}
+async function paint(view: View) {
   const sc = render(view)
   for (const [i, k] of [[1, 'l1'], [2, 'l2'], [3, 'l3']] as const) {
     if (sc[k] === shown[k]) continue
@@ -109,7 +120,8 @@ async function poll() {
     void show({ v: 'sale', status: st })
     // Polling continues only while the sale is open and unresolved.
     if (OPEN_STATES.includes(st.state)) schedulePoll()
-  } catch {
+  } catch (e) {
+    if (e instanceof api.NotPairedError) { stopPoll(); return void doPair() }
     void show({ v: 'offline' })
     schedulePoll()
   }
@@ -121,7 +133,8 @@ async function arm(amount: string) {
     saleId = r.saleId; mode = 'sale'
     void show({ v: 'sale', status: { state: 'WAITING', sale: { saleId, amount, asset: ASSET } } })
     schedulePoll()
-  } catch {
+  } catch (e) {
+    if (e instanceof api.NotPairedError) return void doPair()
     flash('Offline - retrying', 'try again', 2500)
   }
 }
