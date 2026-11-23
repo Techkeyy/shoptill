@@ -7,7 +7,20 @@ Handover file. Any director can take over from here. Keep it current after every
 - **INTEGRATION PROVEN (USDT happy path), owner UAT 1:**
   - The whole chain works: glasses → bot setup → arm → customer pays in Telegram → glasses PAID → receipt (`evidence/uat-1-first-payment.md`).
   - Deployed on the VPS with a persistent DB.
-  - Untested: voice (STT), GRAM sale, SHORT/UNMATCHED/FAKE through the product, `/today`, the seller DM when the glasses are closed.
+  - **Edge states proven on real testnet through the real service: 8/8** (`evidence/live-states.md`): PAID, SHORT+top-up, EXTRA, DUPLICATE, FAKE, UNMATCHED+attach, LATE, GRAM.
+  - **Voice proven at component level** (TTS WAVs → live /api/stt, including 12.50 and GRAM).
+  - Untested: voice through the simulator mic, `/today`, the seller DM when the glasses are closed, and a real-input read-only run on a busy mainnet address.
+
+**Next (day 2):**
+1. Real-input run (mainnet read-only).
+2. Seller-DM and /today check.
+3. Red-team plus audit skill.
+4. README (perfect-readme).
+5. Demo video plan (demo-video skill).
+6. `.ehpk` pack.
+7. FEATURE_REQUESTS.md.
+8. Cold reviewer pass.
+9. Owner UAT 2 with voice.
 
 Last updated: 2026-11-23 by director (Claude Opus 5.5). Builders: Sonnet 5.5 (core), Haiku 5.5 (mechanical tasks).
 Research: `Desktop/skill/idea-research/even-realities-heads-up-idea-research.md` (the idea was called "Till" there; the owner renamed it **ShopTill**. "Shop Pay" was rejected because it is Shopify's trademark).
