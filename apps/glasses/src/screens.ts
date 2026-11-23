@@ -114,7 +114,7 @@ export function render(view: View): Screen {
       sc = { l1: 'ShopTill', l2: view.code ? `Pair: send ${view.code} to @ShopTillBot` : `Getting pairing code${G.ell}`, l3: '2x tap: exit' }
       break
     case 'idle': sc = { l1: 'Say a price', l2: '', l3: HINT_IDLE }; break
-    case 'listening': sc = { l1: `Listening${G.ell}`, l2: 'say the price, e.g. "twelve"', l3: 'tap: stop' }; break
+    case 'listening': sc = { l1: `Listening${G.ell}`, l2: 'say the price, e.g. "twelve dollars fifty"', l3: 'tap: stop' }; break
     case 'preset': sc = { l1: `Preset  ${view.amount.toFixed(2)} ${view.asset}`, l2: 'swipe: change', l3: `tap: start sale ${G.sep} 2x tap: back` }; break
     case 'offline': sc = { l1: `Offline - retrying${G.ell}`, l2: '', l3: '2x tap: cancel' }; break
     case 'receipt': sc = { l1: 'RECEIPT SENT', l2: 'customer has it in Telegram', l3: '' }; break

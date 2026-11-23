@@ -12,3 +12,16 @@ Owner at the PC with the Even Hub simulator (glasses app) and their phone (Teleg
 | Receipt | Tap on glasses → `receipt_sent=1` |
 
 Tx (base64 hash): `o8Vnul9xEnUezboXCkFpmDUxmQ2kMHnspnylo/lbYXA=`
+
+## Voice retry, after the confirm-step fix (7d10829)
+
+The owner had a sore mouth. Before the fix, "twelve fifty" was heard as 250, then 50 twice, and each went straight to a sale (the owner cancelled them).
+After the fix, nothing starts a sale until the seller taps the "Heard …" screen.
+
+Server log, real PC mic through the simulator:
+
+```
+21:37:55 stt heard "Twelve dollars fifty." -> 12.50 USDT
+```
+
+The owner confirmed the glasses showed exactly 12.50 USDT. Lesson: a word between the two numbers ("dollars") makes speech much more reliable. The listening hint now suggests it.
