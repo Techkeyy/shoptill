@@ -27,4 +27,8 @@
 
 ## Verdict
 
-PASS: no false PAID on 2815 real payments (COUNTED 0, FAKE 0, no spam/failed counted).
+No false counts on 2,815 real payments (COUNTED 0, FAKE 0, no spam or failed payment counted). PAID was not possible in this run, so this is not a detection test.
+
+## What this does and does not show
+
+On 2,815 real mainnet payments to 2 busy wallets (read-only), the checker never counted a payment without our reference, never counted a non-allowlisted token, and the run completed without error. PAID was not possible here because no sale reference was present, so this tests false positives from real-world noise, not detection. Both addresses hit the 1,000-row jetton cap (10 pages of 100), so the 24 h window is incomplete for them, and the busiest wallet exceeds the cap.

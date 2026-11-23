@@ -27,7 +27,7 @@ Everything on screen is the real product against the live server on TON testnet.
 1. `curl -s https://shoptill.103-195-188-198.sslip.io/healthz` returns OK.
 2. The glasses simulator shows "Say a price", not "Offline - retrying". If it shows a pairing code, the DB was reset: re-pair first.
 3. Customer wallet balance check: the pay page does a pre-flight and refuses if there is not enough USDT or GRAM for gas (a failed send would waste a take).
-4. Rehearse once and note the real time from "Pay" to PAID. The live-states run took 12 to 25 s on unauthenticated TON Center. Do not narrate a number you did not see. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
+4. Rehearse once and note the real time from "Pay" to PAID. Detection in the P0 spike was 1.3 to 3.6 s from send acceptance. The live-states harness took 12 to 25 s, which includes a wait of about 10 s for the sequence number and throttling, so it is not user-perceived latency. User-perceived latency is to be measured in the owner UAT. Do not narrate a number you did not see. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
 5. Voice: component-checked only, never through the simulator mic. Try the mic once before recording. If it fails, use swipe presets (Scene 3 gives both).
 
 ## Scenes
@@ -102,11 +102,11 @@ Everything on screen is the real product against the live server on TON testnet.
 
 **On screen**
 1. Tab F: the live-states table, 8 rows, hold 3 seconds. Caption: `8 of 8 edge states on real testnet`.
-2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, 0 false PAID`, `130 tests` (86 server, 21 glasses, 23 core).
+2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `130 tests` (86 server, 21 glasses, 23 core).
 3. Tab E: the first real owner payment (UAT 1) transaction.
 
 **Say**
-> "Eight of eight edge states passed on real testnet: short, extra, duplicate, fake, late, and more, each with a transaction. And I replayed 2,815 real mainnet payments to busy wallets, read only. Zero false PAID."
+> "Eight of eight edge states passed on real testnet: short, extra, duplicate, fake, late, and more, each with a transaction. And I replayed 2,815 real mainnet payments to busy wallets, read only. Nothing was falsely counted. PAID was not possible there, because no sale reference was present, so that tests false positives, not detection."
 
 ### Scene 7 · 2:45 to 2:55 · The honest close (stop on the last word)
 
@@ -124,6 +124,7 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 ## Do not claim
 
 - Do not say or imply a mainnet payment through ShopTill. The mainnet run was a read-only replay.
+- Do not say the 2,815-payment replay shows detection. It shows nothing was falsely counted; no real payment was matched to a sale.
 - Do not say it works on physical G2 hardware. It ran in the simulator.
 - Do not say the seller is alerted when the glasses app is closed. The bot DM exists but is not tested on a live run.
 - Do not give a latency number unless you saw it in this take. Say "when the chain confirms".
@@ -141,7 +142,7 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 | Look-alike USDT with the right ref is FAKE | `evidence/live-states.md` row 5, tx https://testnet.tonviewer.com/transaction/f6d75e2a8150d5fd7f26b42781d845646ae7b68740643aa3f767f761362038d1; `evidence/p0-spike.md` row 11 |
 | 8 of 8 edge states on testnet | `evidence/live-states.md`, "Result: 8/8 as expected." |
 | 11/11 spike | `evidence/p0-spike.md`, "Correct: 11/11", max latency 3571 ms |
-| 2,815 real mainnet payments, 0 false PAID | `evidence/real-input.md`, "PASS: no false PAID on 2815 real payments" |
+| 2,815 real mainnet payments, read-only: nothing falsely counted (PAID not possible, no sale reference) | `evidence/real-input.md`, "Verdict" and "What this does and does not show" |
 | 130 tests | server 86, glasses 21, core 23 (run on 2026-11-23) |
 | Never holds keys or funds | `evidence/security-audit.md`, question 6 |
 | Receipt arrives in Telegram | `evidence/uat-1-first-payment.md` (`receipt_sent=1`), shown live in Scene 4 |

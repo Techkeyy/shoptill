@@ -1,7 +1,15 @@
 # ShopTill security audit (2026-11-23)
 
 Scope: `server/src`, `apps/pay/src`, `apps/glasses/src`, `packages/core/src`, `server/deploy`, `.gitignore`, git history, `evidence/`.
-Live checks were read-only `curl` against the public endpoints. Nothing was changed on production, and none of the fixes below is deployed yet.
+Live checks were read-only `curl` against the public endpoints. Nothing was changed on production during the audit. The fixes were deployed later the same day; see Deployment status.
+
+## Deployment status
+
+- Deployed 2026-11-23: the fixed server and glasses build are live, the server was restarted, and the device secret is enforced.
+- Production check (read-only, 2026-11-23): unauthenticated `GET /api/till/status` returns 403.
+- `.env` on the VPS is mode 600.
+- The server listens on `127.0.0.1:8799` behind Caddy.
+- Not checked: the VPS firewall and the Caddy access-log settings (see Not verified).
 
 ## Method
 
@@ -76,7 +84,7 @@ Confidence key: **[T]** reproduced or covered by a new automated test. **[C]** c
 - **Git history:** the `git log -p --all` grep for Telegram token shapes, `gsk_` Groq keys, private-key headers and mnemonic literals found nothing. Only the dev scripts mention mnemonics, by reading `.secrets/wallets.json`.
 - **Gitignore:** `.gitignore` covers `.env*` (except `.env.example`), `.secrets/`, `evidence/*.db` and `*.db-*`. `git check-ignore` confirmed it. `.env.example` has only empty keys.
 - **Evidence files:** they contain only testnet addresses, a tx hash and master addresses, which are public data. No secrets.
-- **Live public endpoints:** `/healthz` 200, manifest correct, unauthenticated `/api/till/status` returns 403, `/api/pay/info` returns 401, traversal attempts return 404, and the OPTIONS preflight works. These are the pre-fix server.
+- **Live public endpoints:** `/healthz` 200, manifest correct, unauthenticated `/api/till/status` returns 403, `/api/pay/info` returns 401, traversal attempts return 404, and the OPTIONS preflight works. These checks ran against the pre-fix server, before the 2026-11-23 deploy.
 - **Payment classifier:** ordering success, allowlist, ref, amount, time. Sub-refs and DUPLICATE are covered by the existing 22 core tests.
 - **Concurrency:** one process with synchronous SQLite, so no cross-request races beyond S-07. The watcher is re-entrancy guarded.
 - **XSS on the pay page:** every dynamic string is passed through `esc()` (shop name, amounts, errors).
@@ -84,7 +92,7 @@ Confidence key: **[T]** reproduced or covered by a new automated test. **[C]** c
 
 ## Not verified
 
-- **Production:** the deployed server is the old build, and `.env` mode, the VPS firewall and the Caddy access-log settings were not checked (no SSH, per the brief).
+- **Production:** the VPS firewall and the Caddy access-log settings are not checked. The deployment facts in Deployment status are from 2026-11-23.
 - **TON Center:** I did not test the adversarial fake-wallet case (D-2).
 - **Tooling:** no dependency CVE scan was run, and no fuzzing.
 
