@@ -58,6 +58,9 @@ export function createApi(d: ApiDeps) {
     form.set('file', new Blob([new Uint8Array(r.body)], { type: 'audio/wav' }), 'audio.wav');
     form.set('model', 'whisper-large-v3-turbo');
     form.set('language', 'en');
+    // Bias toward decimal prices: without this, "twelve fifty" came back as "1250"
+    // (checked with TTS audio 2026-11-23; with the prompt it returns "12.50").
+    form.set('prompt', 'Shop prices: twelve fifty is 12.50, seven twenty-five is 7.25, five is 5, twenty dollars is $20, three gram is 3 gram.');
     form.set('response_format', 'json');
     const res = await doFetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST', headers: { authorization: `Bearer ${cfg.groqKey}` }, body: form,

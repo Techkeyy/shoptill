@@ -116,6 +116,10 @@ Two scans of one armed sale each get their own sub-reference. The first full pay
 
 ## Log
 
+- 2026-11-23: **UAT 1 PASSED** (`evidence/uat-1-first-payment.md`): PAID on the glasses, plus a receipt in Telegram with a tonviewer link.
+- 2026-11-23: **STT component check** (Windows TTS WAVs → live `/api/stt`): twelve→12.00, "twenty dollars"→20.00, "five gram"→5.00 GRAM, "one hundred and five"→105.00, small talk→null.
+  - **BUG:** "twelve fifty"→"1250."→1250.00. Fix: Groq `prompt` bias toward decimal prices.
+  - **BUG:** the glasses ignore the `asset` returned by STT and always arm USDT. Pending, after the polish builder finishes (same files).
 - 2026-11-23 (evening): **Owner UAT, first real run.** Setup worked: pair → name → wallet → counter QR → glasses "Say a price" → preset 12 USDT → READY. Five bugs found and sent to fix:
   1. Pay page crashed with "Buffer is not defined" (polyfill import order). Fixed.
   2. Setup link expired after 20 min with "bad token". Fixed: 24 h TTL, `/wallet`, friendly message.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeDebouncer, normalizeEvent } from './events'
 import { encodeWav } from './wav'
-import { MAX_LINE, MAX_TOTAL, render, renderSale, type View } from './screens'
+import { MAX_LINE, MAX_TOTAL, nextPreset, render, renderSale, type View } from './screens'
 
 describe('normalizeEvent', () => {
   it('sysEvent without eventType is a tap', () => expect(normalizeEvent({ sysEvent: {} }).kind).toBe('tap'))
@@ -28,6 +28,19 @@ describe('debouncer', () => {
   })
 })
 
+describe('presets', () => {
+  it('first swipe from idle lands on 5.00 and later swipes advance', () => {
+    expect(nextPreset(-1, 'up')).toBe(0)
+    expect(nextPreset(0, 'up')).toBe(1)
+    expect(nextPreset(1, 'up')).toBe(2)
+    expect(nextPreset(0, 'down')).toBe(4)
+  })
+  it('receipt message shows both lines', () => {
+    const s = render({ v: 'msg', text: 'RECEIPT SENT', sub: 'customer has it in Telegram', hint: '' })
+    expect(s.l2).toBe('customer has it in Telegram')
+  })
+})
+
 describe('encodeWav', () => {
   it('writes a valid 16k mono header', () => {
     const w = encodeWav([new Uint8Array(10), new Uint8Array(6)])
@@ -45,12 +58,13 @@ describe('encodeWav', () => {
 })
 
 describe('screens', () => {
-  const sale = { saleId: 's', amount: '12.00', asset: 'USDT', from: 'EQabcdefghijklx4f', ageSec: 4, receivedTotal: '9.00', missing: '3.00', extra: '2.00' }
+  const sale = { saleId: 's', amount: '12.00', asset: 'USDT', from: 'EQabcdefghijklx4f', ageSec: 4, paidAt: 1763924940, receivedTotal: '9.00', missing: '3.00', extra: '2.00' }
   it('ready', () => expect(renderSale({ state: 'WAITING', sale }).l1).toBe('READY  12.00 USDT'))
   it('paid', () => {
     const s = renderSale({ state: 'PAID', sale })
     expect(s.l1).toBe('PAID  12.00 USDT')
-    expect(s.l2).toContain('4s ago')
+    expect(s.l2).toBe('from EQ...x4f | 19:09')
+    expect(s.l2).not.toContain('ago')
     expect(s.l3).toBe('tap: send receipt')
   })
   it('fake is loud', () => expect(renderSale({ state: 'FAKE', sale }).l1).toContain('FAKE TOKEN - NOT PAID'))

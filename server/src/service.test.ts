@@ -118,6 +118,18 @@ describe('payment routing and states', () => {
     expect(statusState()).toBe('WAITING');
   });
 
+  it('ageSec counts from the payment, not from sale creation', async () => {
+    const id = arm();
+    const r = e.svc.mintRef(id, 777);
+    e.chain.native.push(pay({ comment: `st:${r}`, utime: T0 + 5 }));
+    await e.svc.tick();
+    e.clock.ms += 100_000;
+    const st = e.svc.status(e.device);
+    expect(st.state).toBe('PAID');
+    expect(st.sale.paidAt).toBe(T0 + 5);
+    expect(st.sale.ageSec).toBe(95);
+  });
+
   it('two refs, one sale: either ref pays it, the other mini app sees paid', async () => {
     const id = arm();
     const r1 = e.svc.mintRef(id, 777);

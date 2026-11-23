@@ -10,14 +10,14 @@ export const MAX_TOTAL = 450
 
 export type Screen = { l1: string; l2: string; l3: string }
 
-export interface Sale { saleId: string; amount: string; asset: string; receivedTotal?: string; from?: string; ageSec?: number; extra?: string; missing?: string }
+export interface Sale { saleId: string; amount: string; asset: string; receivedTotal?: string; from?: string; ageSec?: number; paidAt?: number; extra?: string; missing?: string }
 export interface Status { state: string; sale?: Sale; unmatched?: { amount: string; from: string; paymentId: string } }
 
 export type View =
   | { v: 'pair'; code?: string }
   | { v: 'idle' }
   | { v: 'listening' }
-  | { v: 'msg'; text: string; hint?: string }
+  | { v: 'msg'; text: string; sub?: string; hint?: string }
   | { v: 'offline' }
   | { v: 'receipt' }
   | { v: 'today'; count: number; total: string; asset: string }
@@ -37,7 +37,19 @@ export function shortAddr(a?: string): string {
 }
 
 function money(s?: Sale): string { return s ? `${s.amount} ${s.asset}` : '' }
-function ago(sec?: number): string { return sec === undefined ? '' : ` ${G.sep} ${sec}s ago` }
+/** UTC hh:mm of the payment (stable; never counts up from sale creation). */
+export function clock(epochSec?: number): string {
+  if (epochSec === undefined || !Number.isFinite(epochSec)) return ''
+  const d = new Date(epochSec * 1000)
+  return ` ${G.sep} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
+/** Scroll step: the first swipe from idle enters preset mode at the first preset; later swipes advance. */
+export function nextPreset(idx: number, dir: 'up' | 'down'): number {
+  const n = PRESETS.length
+  if (idx < 0) return 0
+  return (idx + (dir === 'up' ? 1 : n - 1)) % n
+}
 
 export function renderSale(st: Status): Screen {
   const s = st.sale
@@ -46,7 +58,7 @@ export function renderSale(st: Status): Screen {
     case 'WAITING':
       return { l1: `READY  ${amt}`, l2: `waiting for payment${G.ell}`, l3: '2x tap: cancel sale' }
     case 'PAID':
-      return { l1: `PAID  ${amt}`, l2: `from ${shortAddr(s?.from)}${ago(s?.ageSec)}`, l3: 'tap: send receipt' }
+      return { l1: `PAID  ${amt}`, l2: `from ${shortAddr(s?.from)}${clock(s?.paidAt)}`, l3: 'tap: send receipt' }
     case 'EXTRA':
       return { l1: `PAID  ${amt}`, l2: `+${s?.extra ?? '?'} extra ${G.sep} from ${shortAddr(s?.from)}`, l3: 'tap: send receipt' }
     case 'SHORT':
@@ -78,7 +90,7 @@ export function render(view: View): Screen {
     case 'offline': sc = { l1: `Offline - retrying${G.ell}`, l2: '', l3: '2x tap: cancel' }; break
     case 'receipt': sc = { l1: 'RECEIPT SENT', l2: 'customer has it in Telegram', l3: '' }; break
     case 'today': sc = { l1: `Today: ${view.count} sales ${G.sep} ${view.total}`, l2: view.asset, l3: 'swipe up: back' }; break
-    case 'msg': sc = { l1: view.text, l2: '', l3: view.hint ?? 'tap: ok' }; break
+    case 'msg': sc = { l1: view.text, l2: view.sub ?? '', l3: view.hint ?? 'tap: ok' }; break
     case 'sale': sc = renderSale(view.status); break
   }
   const out = { l1: clip(sc.l1), l2: clip(sc.l2), l3: clip(sc.l3) }

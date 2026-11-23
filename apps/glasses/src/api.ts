@@ -40,7 +40,7 @@ export const attach = (deviceId: string, saleId: string, paymentId: string) =>
 export const today = (deviceId: string) =>
   call<{ count: number; total: string; asset: string }>('GET', '/api/today' + q(deviceId))
 
-export async function stt(deviceId: string, wav: Uint8Array): Promise<{ text: string; amount: string | null }> {
+export async function stt(deviceId: string, wav: Uint8Array): Promise<{ text: string; amount: string | null; asset?: string }> {
   if (MOCK) return mock.stt()
   let res: Response
   try {

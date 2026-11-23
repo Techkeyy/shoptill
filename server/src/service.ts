@@ -228,9 +228,10 @@ export class Till {
       sale: {
         saleId: s.id, amount: formatMoney(BigInt(s.amount_raw), s.decimals), asset: s.asset,
         receivedTotal: formatMoney(BigInt(s.paid_raw), s.decimals),
-        ageSec: now - s.created_at,
+        ageSec: Math.max(0, now - (s.paid_at ?? s.created_at)),
       },
     };
+    if (s.paid_at) out.sale.paidAt = s.paid_at;
     if (s.from_addr) out.sale.from = shortAddr(s.from_addr);
     if (s.state === 'EXTRA') out.sale.extra = formatMoney(BigInt(s.extra_raw), s.decimals);
     if (s.state === 'SHORT') out.sale.missing = formatMoney(BigInt(s.missing_raw), s.decimals);

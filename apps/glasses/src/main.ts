@@ -8,7 +8,7 @@ import {
 } from '@evenrealities/even_hub_sdk'
 import * as api from './api'
 import { makeDebouncer, normalizeEvent } from './events'
-import { PRESETS, render, type Screen, type Status, type View } from './screens'
+import { PRESETS, nextPreset, render, type Screen, type Status, type View } from './screens'
 import { encodeWav } from './wav'
 
 const ASSET = 'USDT' as const
@@ -71,7 +71,7 @@ const deviceId = await getDeviceId()
 // --- state ------------------------------------------------------------------
 type Mode = 'pair' | 'idle' | 'listening' | 'preset' | 'sale' | 'info'
 let mode: Mode = 'pair'
-let presetIdx = 2
+let presetIdx = -1 // -1 = not in preset mode; first swipe lands on PRESETS[0]
 let saleId: string | null = null
 let last: Status | null = null
 let paymentId: string | null = null
@@ -81,12 +81,12 @@ let chunks: Uint8Array[] = []
 let micOn = false
 
 function goIdle() {
-  mode = 'idle'; saleId = null; last = null; stopPoll()
+  mode = 'idle'; saleId = null; last = null; presetIdx = -1; stopPoll()
   void show({ v: 'idle' })
 }
-function flash(text: string, hint?: string, ms = 2000) {
+function flash(text: string, hint?: string, ms = 2000, sub?: string) {
   mode = 'info'
-  void show({ v: 'msg', text, hint: hint ?? '' })
+  void show({ v: 'msg', text, sub, hint: hint ?? '' })
   window.setTimeout(() => { if (mode === 'info') goIdle() }, ms)
 }
 
@@ -127,11 +127,12 @@ async function poll() {
   }
 }
 
-async function arm(amount: string) {
+type Asset = 'USDT' | 'GRAM'
+async function arm(amount: string, asset: Asset = ASSET) {
   try {
-    const r = await api.arm(deviceId, amount, ASSET)
+    const r = await api.arm(deviceId, amount, asset)
     saleId = r.saleId; mode = 'sale'
-    void show({ v: 'sale', status: { state: 'WAITING', sale: { saleId, amount, asset: ASSET } } })
+    void show({ v: 'sale', status: { state: 'WAITING', sale: { saleId, amount, asset } } })
     schedulePoll()
   } catch (e) {
     if (e instanceof api.NotPairedError) return void doPair()
@@ -156,7 +157,8 @@ async function stopListening() {
   void show({ v: 'msg', text: 'Thinking...', hint: '' })
   try {
     const r = await api.stt(deviceId, wav)
-    if (r.amount) await arm(Number(r.amount).toFixed(2))
+    // Spoken currency wins ("five gram" -> GRAM); default USDT.
+    if (r.amount) await arm(Number(r.amount).toFixed(2), r.asset === 'GRAM' ? 'GRAM' : 'USDT')
     else flash("Didn't catch that - try again", 'tap: speak', 2500)
   } catch {
     flash('Offline - retrying', 'try again', 2500)
@@ -171,13 +173,13 @@ async function onTap() {
     case 'pair': return
     case 'idle': return startListening()
     case 'listening': return stopListening()
-    case 'preset': return arm(PRESETS[presetIdx].toFixed(2))
+    case 'preset': return arm(PRESETS[Math.max(0, presetIdx)].toFixed(2))
     case 'info': return goIdle()
     case 'sale': {
       const st = last?.state
       if (st === 'PAID' || st === 'EXTRA') {
         try { if (saleId) await api.receipt(deviceId, saleId) } catch { return flash('Offline - retry', 'tap again', 2000) }
-        return flash('RECEIPT SENT', '', 1800)
+        return flash('RECEIPT SENT', '', 2500, 'customer has it in Telegram')
       }
       if (st === 'UNMATCHED' && saleId && paymentId) {
         try { await api.attach(deviceId, saleId, paymentId) } catch { /* poll will show truth */ }
@@ -204,13 +206,16 @@ async function onDouble() {
 }
 
 async function onScroll(dir: 'up' | 'down') {
+  // Ignore scrolls that cannot act, BEFORE the debouncer: a swipe burst during pairing,
+  // listening or a sale used to consume the 300 ms window and swallow the next real swipe.
+  if (mode === 'pair' || mode === 'listening' || mode === 'sale') return
   if (!scrollOk()) return
   if (mode === 'idle' && dir === 'down') {
     try { const t = await api.today(deviceId); mode = 'info'; void show({ v: 'today', ...t }) } catch { flash('Offline - retrying', '', 2000) }
     return
   }
   if (mode === 'idle' || mode === 'preset') {
-    presetIdx = (presetIdx + (dir === 'up' ? 1 : PRESETS.length - 1)) % PRESETS.length
+    presetIdx = nextPreset(presetIdx, dir)
     mode = 'preset'
     void show({ v: 'preset', amount: PRESETS[presetIdx], asset: ASSET })
     return

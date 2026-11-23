@@ -7,7 +7,7 @@ Server `state` values: IDLE, WAITING, PAID, SHORT, EXTRA, DUPLICATE, FAKE, UNMAT
 | --- | --- | --- |
 | POST /api/device/pair | `{deviceId}` | `{paired:boolean, code?:string, shopName?:string}` (code like TILL-4821 while unpaired; glasses re-call every 3 s) |
 | POST /api/till/arm | `{deviceId, amount:"12.00", asset:"USDT"\|"GRAM"}` | `{saleId}` |
-| GET /api/till/status?deviceId= | | `{state, sale?:{saleId, amount, asset, receivedTotal, from?, ageSec?, extra?, missing?}, unmatched?:{amount, from, paymentId}}` |
+| GET /api/till/status?deviceId= | | `{state, sale?:{saleId, amount, asset, receivedTotal, from?, ageSec? (seconds since the payment; since creation before payment), paidAt? (epoch s of the payment), extra?, missing?}, unmatched?:{amount, from, paymentId}}` |
 | POST /api/till/void | `{deviceId, saleId}` | any 200 |
 | POST /api/till/receipt | `{deviceId, saleId}` | any 200 |
 | POST /api/till/attach | `{deviceId, saleId, paymentId}` | any 200 |

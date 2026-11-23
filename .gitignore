@@ -3,3 +3,5 @@ dist
 .env*
 !.env.example
 .secrets/
+evidence/*.db
+evidence/*.db-*
