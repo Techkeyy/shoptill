@@ -73,7 +73,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     publicUrl: (env.PUBLIC_URL ?? 'https://shoptill.103-195-188-198.sslip.io').replace(/\/+$/, ''),
     port: Number(env.PORT ?? 8799),
     network: env.NETWORK === 'mainnet' ? 'mainnet' : 'testnet',
-    dbPath: env.DB_PATH ?? 'shoptill.db',
+    dbPath: env.DB_PATH || resolve(process.cwd(), 'shoptill.db'),
     payDir,
     usdt: jc.usdt,
     jettonMasters: jc.masters,

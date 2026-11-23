@@ -310,14 +310,25 @@ export class Till {
   }
 
   /** Jetton wallet lookup for the Mini App; master is forced to the sale's allowlisted one. */
-  async jettonWallet(ref: string, owner: string): Promise<string | null> {
+  async jettonWallet(ref: string, owner: string): Promise<{ address: string; balance: string; exists: boolean }> {
     const info = this.payInfo(ref);
     if (!info?.jettonMaster) throw new HttpError(400, 'not a jetton sale');
     try { Address.parse(owner); } catch { throw new HttpError(400, 'bad owner'); }
     if (!this.d.ton.raw) throw new HttpError(501, 'lookup unavailable');
     const j = await this.d.ton.raw('/jetton/wallets', { owner_address: owner, jetton_address: info.jettonMaster, limit: '1' });
-    const w = j?.jetton_wallets?.[0]?.address;
-    return typeof w === 'string' ? w : null;
+    const w = j?.jetton_wallets?.[0];
+    if (!w || typeof w.address !== 'string') return { address: '', balance: '0', exists: false };
+    return { address: w.address, balance: /^\d+$/.test(String(w.balance ?? '')) ? String(w.balance) : '0', exists: true };
+  }
+
+  /** Native (GRAM) balance in nanograms for the Mini App fee pre-check. */
+  async accountBalance(ref: string, owner: string): Promise<string> {
+    if (!this.payInfo(ref)) throw new HttpError(404, 'unknown ref');
+    try { Address.parse(owner); } catch { throw new HttpError(400, 'bad owner'); }
+    if (!this.d.ton.raw) throw new HttpError(501, 'lookup unavailable');
+    const j = await this.d.ton.raw('/account', { address: owner });
+    const b = String(j?.balance ?? '0');
+    return /^\d+$/.test(b) ? b : '0';
   }
 
   // ---------- watcher ----------

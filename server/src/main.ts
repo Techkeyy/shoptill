@@ -32,6 +32,7 @@ const chain: Chain = {
   raw: (path, params) => tc.get(path, params),
 };
 
+console.log(`database: ${cfg.dbPath}`);
 const db = openDb(cfg.dbPath);
 const tg = new BotApi(cfg.botToken);
 const svc = new Till({ db, cfg, ton: chain, tg });

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createApi } from './api.ts';
 import { signInitData, signToken, validateInitData, verifyToken } from './auth.ts';
 import { Bot } from './bot.ts';
-import type { Config } from './config.ts';
+import { loadConfig, type Config } from './config.ts';
 import { openDb } from './db.ts';
 import { HttpError, Till, type Chain } from './service.ts';
 import type { Markup, Tg, Update } from './telegram.ts';
@@ -23,6 +23,15 @@ class FakeChain implements Chain {
   jettons: IncomingPayment[] = [];
   async getIncomingTransactions(_a: string, since: number) { return this.native.filter((p) => p.utime >= since); }
   async getJettonTransfersTo(_a: string, since: number) { return this.jettons.filter((p) => p.utime >= since); }
+  rawCalls: { path: string; params: Record<string, string> }[] = [];
+  jettonWallets: any[] = [{ address: '0:' + 'ab'.repeat(32), balance: '5000000' }];
+  accountBalance = '300000000';
+  async raw(path: string, params: Record<string, string>) {
+    this.rawCalls.push({ path, params });
+    if (path === '/jetton/wallets') return { jetton_wallets: this.jettonWallets };
+    if (path === '/account') return { balance: this.accountBalance };
+    return {};
+  }
 }
 
 class FakeTg implements Tg {
@@ -413,5 +422,44 @@ describe('full flow (fake toncenter + fake telegram, through the HTTP handler)',
     expect((await call('GET', '/api/today?deviceId=g1')).json).toEqual({ count: 1, total: '12.00', asset: 'USDT' });
     expect((await call('OPTIONS', '/api/till/arm')).status).toBe(204);
     expect((await call('GET', '/healthz')).json).toEqual({ ok: true });
+  });
+});
+
+describe('config DB_PATH', () => {
+  it('empty DB_PATH resolves to a real file path, not an empty string', () => {
+    const c = loadConfig({ DB_PATH: '' });
+    expect(c.dbPath).not.toBe('');
+    expect(c.dbPath.endsWith('shoptill.db')).toBe(true);
+    expect(loadConfig({}).dbPath).toBe(c.dbPath);
+    expect(loadConfig({ DB_PATH: '/x/y.db' }).dbPath).toBe('/x/y.db');
+  });
+});
+
+describe('pay balance + jetton-wallet endpoints', () => {
+  it('require auth and return balance/exists', async () => {
+    const e = await setup();
+    const c = cfg();
+    const api = createApi({ svc: e.svc, bot: e.bot, cfg: c });
+    const call = async (path: string, headers: Record<string, string> = {}) => {
+      const u = new URL(path, 'http://x');
+      const r = await api({ method: 'GET', path: u.pathname, query: u.searchParams, headers, body: Buffer.alloc(0) });
+      return { status: r.status, json: JSON.parse(String(r.body)) };
+    };
+    const { saleId } = e.svc.arm(e.device, '5.00', 'USDT');
+    const ref = e.svc.mintRef(saleId, 700);
+    const t = signToken({ k: 'pay', chat: 700, ref, exp: Math.floor(Date.now() / 1000) + 600 }, BOT_TOKEN);
+    const init = signInitData({ auth_date: String(Math.floor(Date.now() / 1000)), user: JSON.stringify({ id: 700 }) }, BOT_TOKEN);
+    const owner = encodeURIComponent(CUSTOMER.toRawString());
+    const bal = `/api/pay/balance?ref=${ref}&t=${encodeURIComponent(t)}&owner=${owner}`;
+    const jw = `/api/pay/jetton-wallet?ref=${ref}&t=${encodeURIComponent(t)}&owner=${owner}`;
+    expect((await call(bal)).status).toBe(401);
+    expect((await call(jw)).status).toBe(401);
+    const b = await call(bal, { 'x-tg-init-data': init });
+    expect(b.status).toBe(200);
+    expect(b.json).toEqual({ balance: '300000000' });
+    const j = await call(jw, { 'x-tg-init-data': init });
+    expect(j.json).toMatchObject({ balance: '5000000', exists: true });
+    e.chain.jettonWallets = [];
+    expect((await call(jw, { 'x-tg-init-data': init })).json).toMatchObject({ balance: '0', exists: false });
   });
 });

@@ -113,6 +113,12 @@ Two scans of one armed sale each get their own sub-reference. The first full pay
 
 ## Log
 
+- 2026-11-23 (evening): **Owner UAT, first real run.** Setup worked: pair → name → wallet → counter QR → glasses "Say a price" → preset 12 USDT → READY. Five bugs found and sent to fix:
+  1. Pay page crashed with "Buffer is not defined" (polyfill import order). Fixed.
+  2. Setup link expired after 20 min with "bad token". Fixed: 24 h TTL, `/wallet`, friendly message.
+  3. **The server ran on an anonymous temp DB** (`DB_PATH=` empty → `??` kept ''). It lost all state on every restart, so the owner had to re-pair. Fix in progress.
+  4. **The seller's TON Connect session leaked into the customer pay page.** The shop wallet tried to pay itself, Tonkeeper warned "Failed", and the user confirmed anyway. **The glasses correctly stayed READY** (truth held). Fix in progress: show the connected wallet, Change wallet, block self-pay, disconnect after setup.
+  5. Endless "Waiting for the network…" spinner after a failed send. Fix in progress: balance pre-flight check, 90 s timeout, cancel message.
 - 2026-11-23: **P0 live spike passed** (11/11, ≤ 3.6 s). Three real-chain lessons came out of it, all fixed:
   1. **A bounceable payment to a never-used seller wallet bounces back.** The pay page now sends GRAM non-bounceable (UQ/0Q form).
   2. **A credited payment to an uninit wallet is reported `aborted: true`** (compute skipped: no_state). Core no longer uses `aborted`. Money arrived iff `credit_ph.credit > 0` and there is no `ok` bounce phase.

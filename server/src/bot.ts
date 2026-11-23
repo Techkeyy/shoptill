@@ -6,10 +6,13 @@ import type { Till } from './service.ts';
 import type { Tg, Update, Markup } from './telegram.ts';
 
 const TOKEN_TTL = 20 * 60;
+/** Setup links only bind a public address to the chat that asked; a day is fine. */
+const SETUP_TTL = 24 * 60 * 60;
 const HELP = [
   'ShopTill commands',
   '/today - sales and total for today (UTC)',
   '/history - your last 10 sales',
+  '/wallet - connect or change the wallet that receives payments',
   '/help - this message',
   '',
   'To set up: send me the code shown on your glasses (like TILL-1234).',
@@ -48,6 +51,12 @@ export class Bot {
     if (/^\/help(?:@\w+)?$/.test(text)) { await this.tg.send(chat, HELP); return; }
     if (/^\/today(?:@\w+)?$/.test(text)) return this.cmdToday(chat);
     if (/^\/history(?:@\w+)?$/.test(text)) return this.cmdHistory(chat);
+    if (/^\/wallet(?:@\w+)?$/.test(text)) {
+      const s = this.svc.sellerShop(chat);
+      if (!s || s.stage === 'name') { await this.tg.send(chat, 'First send me the code shown on your glasses (like TILL-1234).'); return; }
+      await this.sendWalletPrompt(chat, s.id, s.name);
+      return;
+    }
 
     const code = /^TILL-\d{4}$/i.exec(text);
     if (code) {
@@ -68,7 +77,7 @@ export class Bot {
   }
 
   private async sendWalletPrompt(chat: number, shopId: number, name: string) {
-    const t = signToken({ k: 'setup', chat, shop: shopId, exp: this.nowSec() + TOKEN_TTL }, this.cfg.botToken);
+    const t = signToken({ k: 'setup', chat, shop: shopId, exp: this.nowSec() + SETUP_TTL }, this.cfg.botToken);
     const url = `${this.cfg.publicUrl}/pay/?mode=setup&t=${encodeURIComponent(t)}`;
     await this.tg.send(chat, `Great, "${name}". Now connect the wallet that should receive payments. Only your public address is read.`,
       { inline_keyboard: [[{ text: 'Connect your wallet', web_app: { url } }]] });

@@ -1,8 +1,7 @@
-import { Buffer } from 'buffer';
-(globalThis as any).Buffer = Buffer;
+import './polyfill';
 
 import { Address, beginCell, toNano } from '@ton/core';
-import { CHAIN, TonConnectUI, type Wallet } from '@tonconnect/ui';
+import { CHAIN, TonConnectUI, UserRejectsError, type Wallet } from '@tonconnect/ui';
 
 declare global {
   interface Window { Telegram?: { WebApp: any } }
@@ -49,6 +48,7 @@ async function wait(ms: number) { return new Promise((r) => setTimeout(r, ms)); 
 // ---------- setup mode ----------
 
 async function setup() {
+  let finished = false;
   const draw = (err = '') => {
     const w = connected();
     render(`
@@ -63,13 +63,16 @@ async function setup() {
       if (cur.account.chain !== CHAIN.TESTNET) { draw('Please switch your wallet to testnet, then reconnect.'); return; }
       try {
         await api('/api/shop/address', { method: 'POST', body: JSON.stringify({ t: token, address: cur.account.address }) });
+        // never let the seller's session leak into the customer pay flow on this device
+        finished = true;
+        try { await tc.disconnect(); } catch { /* ignore */ }
         render(`<div class="result ok">Done</div><div class="note">Return to the chat. Your counter QR is on its way.</div>
           <button class="main" id="close">Back to chat</button>`);
         document.getElementById('close')!.onclick = () => tg?.close?.();
       } catch (e) { draw((e as Error).message); }
     };
   };
-  tc.onStatusChange(() => draw());
+  tc.onStatusChange(() => { if (!finished) draw(); });
   draw();
 }
 
@@ -91,15 +94,43 @@ function resultView(info: Info) {
   }
 }
 
-async function pollUntilDone(first: Info) {
+const POLL_MS = 90_000;
+
+/** Resolves true when finished (result shown), false on timeout. */
+async function pollUntilDone(first: Info): Promise<boolean> {
   let info = first;
-  for (let i = 0; i < 150; i++) {
-    render(`<div class="shop">${esc(info.shop)}</div><div class="spin"></div><div class="note">Waiting for the network…</div>`);
+  const end = Date.now() + POLL_MS;
+  render(`<div class="shop">${esc(info.shop)}</div><div class="spin"></div><div class="note">Waiting for the network…</div>`);
+  while (Date.now() < end) {
     await wait(2000);
     try { info = await api(`/api/pay/info?ref=${ref}&t=${encodeURIComponent(token)}`); } catch { continue; }
-    if (DONE.has(info.state) || info.state === 'SHORT') { render(resultView(info)); if (info.state !== 'SHORT') return; }
+    if (DONE.has(info.state)) { render(resultView(info)); return true; }
   }
-  render(`<div class="note">Still waiting. You can close this; the seller will see the payment when it lands.</div>`);
+  return false;
+}
+
+const GRAM_FEE_USDT = 120_000_000n; // 0.12 GRAM
+const GRAM_FEE_NATIVE = 20_000_000n; // 0.02 GRAM
+const fmt = (raw: bigint, dec: number) => {
+  const s = raw.toString().padStart(dec + 1, '0');
+  const w = s.slice(0, -dec), f = s.slice(-dec).replace(/0+$/, '');
+  return f ? `${w}.${f}` : w;
+};
+
+/** Throws a user-facing Error if the customer's wallet cannot cover the payment. */
+async function preflight(info: Info, w: Wallet) {
+  const q = `ref=${ref}&t=${encodeURIComponent(token)}&owner=${encodeURIComponent(w.account.address)}`;
+  const gram = BigInt((await api(`/api/pay/balance?${q}`)).balance ?? '0');
+  if (info.asset === 'USDT') {
+    const jw = await api(`/api/pay/jetton-wallet?${q}`);
+    const bal = BigInt(jw.balance ?? '0');
+    const need = BigInt(info.amountRaw);
+    if (!jw.exists || bal < need) throw new Error(`Your wallet doesn't have enough USDT (has ${fmt(jw.exists ? bal : 0n, info.decimals)}, needs ${fmt(need, info.decimals)}).`);
+    if (gram < GRAM_FEE_USDT) throw new Error('Your wallet needs a little GRAM for the network fee.');
+  } else {
+    const need = BigInt(info.amountRaw);
+    if (gram < need + GRAM_FEE_NATIVE) throw new Error(`Your wallet doesn't have enough GRAM (has ${fmt(gram, 9)}, needs ${fmt(need + GRAM_FEE_NATIVE, 9)} including the network fee).`);
+  }
 }
 
 async function sendPayment(info: Info, w: Wallet) {
@@ -116,6 +147,7 @@ async function sendPayment(info: Info, w: Wallet) {
     return;
   }
   const lookup = await api(`/api/pay/jetton-wallet?ref=${ref}&t=${encodeURIComponent(token)}&owner=${encodeURIComponent(w.account.address)}`);
+  if (!lookup.exists) throw new Error("Your wallet doesn't have any USDT.");
   const customer = Address.parse(w.account.address);
   const body = beginCell()
     .storeUint(0x0f8a7ea5, 32)
@@ -143,34 +175,58 @@ async function pay() {
 
   if (DONE.has(info.state)) { render(info.state === 'PAID' || info.state === 'EXTRA' ? `<div class="result ok">Already paid</div><div class="note">This sale is paid. Nothing more to do.</div>` : resultView(info)); return; }
 
+  const testOnly = info.network === 'testnet';
+  const friendly = (a: string) => {
+    try { const f = Address.parse(a).toString({ bounceable: false, testOnly }); return `${f.slice(0, 4)}…${f.slice(-4)}`; }
+    catch { return `${a.slice(0, 4)}…${a.slice(-4)}`; }
+  };
+  const isSeller = (w: Wallet) => {
+    try { return Address.parse(w.account.address).equals(Address.parse(info.sellerRaw)); } catch { return false; }
+  };
+  const changeWallet = async () => { try { await tc.disconnect(); } catch { /* ignore */ } tc.openModal(); };
+
   const draw = (err = '') => {
     const w = connected();
-    let chainErr = '';
+    let blockErr = '';
     if (w && info.network === 'testnet' && w.account.chain !== CHAIN.TESTNET) {
-      chainErr = 'Switch your wallet to testnet, then reconnect.';
+      blockErr = 'Switch your wallet to testnet, then reconnect.';
+    } else if (w && isSeller(w)) {
+      blockErr = "This is the shop's own wallet. Switch to the wallet you want to pay from.";
     }
     render(`
       <div class="shop">Pay ${esc(info.shop)}</div>
       <div class="amount">${esc(info.amount)} <span class="asset">${esc(info.asset)}</span></div>
-      <div class="note">${info.network === 'testnet' ? 'Test network. No real money.' : ''}</div>
-      ${err || chainErr ? `<div class="err">${esc(err || chainErr)}</div>` : ''}
-      <button class="main" id="go" ${chainErr ? 'disabled' : ''}>${w ? `Pay ${esc(info.amount)} ${esc(info.asset)}` : 'Connect wallet'}</button>
-      ${w ? '<button class="main" id="disc" style="background:transparent;color:var(--tg-theme-link-color,#0088cc)">Use another wallet</button>' : ''}`);
+      <div class="note">${testOnly ? 'Test network. No real money.' : ''}</div>
+      ${w ? `<div class="note">Wallet: <b>${esc(friendly(w.account.address))}</b> <button id="chg" style="background:none;border:0;padding:0;font:inherit;text-decoration:underline;color:var(--tg-theme-link-color,#0088cc)">Change wallet</button></div>` : ''}
+      ${err || blockErr ? `<div class="err">${esc(blockErr || err)}</div>` : ''}
+      <button class="main" id="go" ${blockErr ? 'disabled' : ''}>${w ? `Pay ${esc(info.amount)} ${esc(info.asset)}` : 'Connect wallet'}</button>`);
+    const chg = document.getElementById('chg');
+    if (chg) chg.onclick = () => { void changeWallet(); };
     document.getElementById('go')!.onclick = async () => {
       const cur = connected();
       if (!cur) { tc.openModal(); return; }
-      if (info.network === 'testnet' && cur.account.chain !== CHAIN.TESTNET) { draw(); return; }
+      if (isSeller(cur) || (testOnly && cur.account.chain !== CHAIN.TESTNET)) { draw(); return; }
       (document.getElementById('go') as HTMLButtonElement).disabled = true;
+      try { await preflight(info, cur); }
+      catch (e) { draw((e as Error).message); return; }
       try {
         await sendPayment(info, cur);
-        await pollUntilDone(info);
       } catch (e) {
         const m = (e as Error).message;
-        draw(/reject|cancel|declin/i.test(m) ? 'Payment cancelled.' : m);
+        draw(e instanceof UserRejectsError || /reject|cancel|declin|user denied/i.test(m) ? 'Payment cancelled — nothing was sent.' : m);
+        return;
       }
+      const waitLoop = async () => {
+        if (await pollUntilDone(info)) return;
+        render(`<div class="shop">${esc(info.shop)}</div>
+          <div class="note">No payment arrived yet. If your wallet showed an error, nothing was sent — you can try again.</div>
+          <button class="main" id="again">Try again</button>
+          <button class="main" id="keep" style="background:transparent;color:var(--tg-theme-link-color,#0088cc)">Keep waiting</button>`);
+        document.getElementById('again')!.onclick = () => draw();
+        document.getElementById('keep')!.onclick = () => { void waitLoop(); };
+      };
+      await waitLoop();
     };
-    const d = document.getElementById('disc');
-    if (d) d.onclick = () => { void tc.disconnect(); };
   };
   tc.onStatusChange(() => draw());
   draw();

@@ -42,7 +42,9 @@ export function createApi(d: ApiDeps) {
   /** Mini App auth: valid signed token AND Telegram initData for the same user. */
   function authMini(r: Req, kind: 'pay' | 'setup', token: string): TokenPayload {
     const t = verifyToken(token, cfg.botToken);
-    if (!t || t.k !== kind) throw new HttpError(401, 'bad token');
+    if (!t || t.k !== kind) throw new HttpError(401, kind === 'setup'
+      ? 'This link has expired. Go back to the chat and send /wallet for a fresh one.'
+      : 'This payment link has expired. Go back to the chat and tap Refresh.');
     const init = validateInitData(r.headers['x-tg-init-data'] ?? '', cfg.botToken);
     if (!init || init.user.id !== t.chat) throw new HttpError(401, 'bad initData');
     return t;
@@ -126,9 +128,13 @@ export function createApi(d: ApiDeps) {
           const ref = str(r.query.get('ref'), 'ref');
           const t = authMini(r, 'pay', r.query.get('t') ?? '');
           if (t.ref !== ref) throw new HttpError(401, 'token/ref mismatch');
-          const address = await svc.jettonWallet(ref, str(r.query.get('owner'), 'owner'));
-          if (!address) throw new HttpError(404, 'no jetton wallet for this account');
-          return json(200, { address });
+          return json(200, await svc.jettonWallet(ref, str(r.query.get('owner'), 'owner')));
+        }
+        case 'GET /api/pay/balance': {
+          const ref = str(r.query.get('ref'), 'ref');
+          const t = authMini(r, 'pay', r.query.get('t') ?? '');
+          if (t.ref !== ref) throw new HttpError(401, 'token/ref mismatch');
+          return json(200, { balance: await svc.accountBalance(ref, str(r.query.get('owner'), 'owner')) });
         }
         case 'POST /api/shop/address': {
           const b = body(r);
