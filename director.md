@@ -16,6 +16,17 @@ Handover file. Any director can take over from here. Keep it current after every
 - (b) The spam sample is thin (1 row). Re-run on a spam-heavy personal wallet.
 - (c) During an open sale, every unrelated incoming transfer shows as UNMATCHED. That is by design (the seller can ignore it or attach it); disclose.
 
+**Cold review 1** (`evidence/cold-review-1.md`). Weighted ~6.4/10: Usefulness 6, R&W 7, Tech 8, UX 5, Business/Safety 5.
+- Worst overclaim: real-input "0 false PAID" is a null result by construction. Reframing.
+- The track says Gram Wallet, but no Gram Wallet payment is in the evidence.
+- Actions launched:
+  - (a) Big-type bitmap status screens, the CONFIRMING state, latency timing, attach safety (Sonnet).
+  - (b) README credibility fixes (Haiku).
+- Owner actions still needed:
+  - Simulator mic run (UAT 2).
+  - TON Center API key (faster ticks).
+  - **Decision:** a mainnet Gram Wallet pilot with a tiny amount of real money, to close the track-fit gap.
+
 **Next (day 2):**
 1. Real-input run (mainnet read-only).
 2. Seller-DM and /today check.
