@@ -150,9 +150,9 @@ npm install
 **Tests** (all pass at time of writing):
 
 ```bash
-npm test -w @shoptill/server      # 86 tests
-npm test -w shoptill-glasses      # 21 tests
-npm test -w @shoptill/core        # 23 tests
+npm test -w @shoptill/server      # 93 tests
+npm test -w shoptill-glasses      # 48 tests
+npm test -w @shoptill/core        # 29 tests
 ```
 
 **Live scripts.** They send real testnet transactions and need two testnet wallets and two test jettons in a gitignored `.secrets/` folder (`testnet-wallets.json`, `testnet-jettons.json`), which are not in the repo. Create them with `npm run spike:wallets -w @shoptill/core` and `npm run spike:jettons -w @shoptill/core`, then fund the customer wallet from the faucet.
