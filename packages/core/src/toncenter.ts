@@ -12,6 +12,12 @@ export interface ClientOpts {
   defaultJettonDecimals?: number;
 }
 
+/** Per-call options. Default behavior (finalized only) is unchanged. */
+export interface FetchOpts {
+  /** also return seen-but-not-finalized rows, flagged `pending: true` (never PAID in classify) */
+  includePending?: boolean;
+}
+
 const TESTNET = 'https://testnet.toncenter.com/api/v3';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -64,7 +70,7 @@ export class TonCenter {
   }
 
   /** Native incoming transfers (plain value transfers; jetton notifications/excess are excluded). */
-  async getIncomingTransactions(address: string, sinceUtime: number): Promise<IncomingPayment[]> {
+  async getIncomingTransactions(address: string, sinceUtime: number, opts: FetchOpts = {}): Promise<IncomingPayment[]> {
     const txs = await this.getAllPages('/transactions', 'transactions', {
       account: address, start_utime: sinceUtime, sort: 'desc',
     });
@@ -72,7 +78,8 @@ export class TonCenter {
     for (const t of txs) {
       const m = t.in_msg;
       if (!m || !m.source) continue; // external or none
-      if (t.finality && t.finality !== 'finalized') continue;
+      const pending = !!t.finality && t.finality !== 'finalized';
+      if (pending && !opts.includePending) continue;
       const op = m.opcode;
       if (op != null && Number(op) !== 0) continue; // jetton notification, excess, etc.
       const d = t.description ?? {};
@@ -90,17 +97,21 @@ export class TonCenter {
         amountRaw: String(m.value ?? '0'), decimals: 9,
         comment: m.message_content?.decoded?.type === 'text_comment'
           ? String(m.message_content.decoded.comment) : null,
+        ...(pending ? { pending: true } : {}),
       });
     }
     return out;
   }
 
-  async getJettonTransfersTo(ownerAddress: string, sinceUtime: number): Promise<IncomingPayment[]> {
+  /** NOTE: /jetton/transfers rows carry no `finality` today; if a row ever does, it is honored like native rows. */
+  async getJettonTransfersTo(ownerAddress: string, sinceUtime: number, opts: FetchOpts = {}): Promise<IncomingPayment[]> {
     const rows = await this.getAllPages('/jetton/transfers', 'jetton_transfers', {
       owner_address: ownerAddress, direction: 'in', start_utime: sinceUtime, sort: 'desc',
     });
     const out: IncomingPayment[] = [];
     for (const t of rows) {
+      const pending = !!t.finality && t.finality !== 'finalized';
+      if (pending && !opts.includePending) continue;
       const master = normalizeAddress(t.jetton_master);
       out.push({
         txHash: t.transaction_hash, lt: String(t.transaction_lt), utime: t.transaction_now,
@@ -109,6 +120,7 @@ export class TonCenter {
         asset: { kind: 'jetton', master },
         amountRaw: String(t.amount), decimals: this.decimals.get(master) ?? this.defDec,
         comment: decodeForwardComment(t),
+        ...(pending ? { pending: true } : {}),
       });
     }
     return out;

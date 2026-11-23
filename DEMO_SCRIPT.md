@@ -102,7 +102,7 @@ Everything on screen is the real product against the live server on TON testnet.
 
 **On screen**
 1. Tab F: the live-states table, 8 rows, hold 3 seconds. Caption: `8 of 8 edge states on real testnet`.
-2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `130 tests` (86 server, 21 glasses, 23 core).
+2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `170 tests` (86 server, 21 glasses, 23 core).
 3. Tab E: the first real owner payment (UAT 1) transaction.
 
 **Say**
@@ -143,6 +143,6 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 | 8 of 8 edge states on testnet | `evidence/live-states.md`, "Result: 8/8 as expected." |
 | 11/11 spike | `evidence/p0-spike.md`, "Correct: 11/11", max latency 3571 ms |
 | 2,815 real mainnet payments, read-only: nothing falsely counted (PAID not possible, no sale reference) | `evidence/real-input.md`, "Verdict" and "What this does and does not show" |
-| 130 tests | server 86, glasses 21, core 23 (run on 2026-11-23) |
+| 170 tests | server 93, glasses 48, core 29 (run on 2026-11-23) |
 | Never holds keys or funds | `evidence/security-audit.md`, question 6 |
 | Receipt arrives in Telegram | `evidence/uat-1-first-payment.md` (`receipt_sent=1`), shown live in Scene 4 |

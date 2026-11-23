@@ -1,6 +1,6 @@
 // DEV ONLY. Active when VITE_MOCK=1. Fakes the server in-browser so the app
-// can be demoed in the simulator. A sale arms, then walks WAITING -> SHORT ->
-// PAID over ~10 s. Never ship a build with VITE_MOCK=1.
+// can be demoed in the simulator. A sale arms, then walks WAITING -> CONFIRMING ->
+// SHORT -> PAID over ~12 s (mirrors the real server contract, see API.md). Never ship a build with VITE_MOCK=1.
 type MockSale = { saleId: string; amount: string; asset: string }
 let sale: MockSale | null = null
 let sales = 14
@@ -22,8 +22,9 @@ export function handle(path: string, body: any): unknown {
     polls++
     const s = { saleId: sale.saleId, amount: sale.amount, asset: sale.asset }
     if (polls < 3) return { state: 'WAITING', sale: s }
-    if (polls < 5) return { state: 'SHORT', sale: { ...s, receivedTotal: '9.00', missing: '3.00' } }
-    return { state: 'PAID', sale: { ...s, from: 'EQ12345x4f', ageSec: (polls - 5) * 2, paidAt: Math.floor(Date.now() / 1000) } }
+    if (polls < 4) return { state: 'CONFIRMING', sale: s }
+    if (polls < 6) return { state: 'SHORT', sale: { ...s, receivedTotal: '9.00', missing: '3.00' } }
+    return { state: 'PAID', sale: { ...s, from: 'EQ12345x4f', ageSec: (polls - 6) * 2, paidAt: Math.floor(Date.now() / 1000) } }
   }
   throw new Error('mock: unknown ' + path)
 }

@@ -9,8 +9,8 @@ import { RateLimiter } from './ratelimit.ts';
 import type { Tg } from './telegram.ts';
 
 export interface Chain {
-  getIncomingTransactions(address: string, sinceUtime: number): Promise<IncomingPayment[]>;
-  getJettonTransfersTo(ownerAddress: string, sinceUtime: number): Promise<IncomingPayment[]>;
+  getIncomingTransactions(address: string, sinceUtime: number, opts?: { includePending?: boolean }): Promise<IncomingPayment[]>;
+  getJettonTransfersTo(ownerAddress: string, sinceUtime: number, opts?: { includePending?: boolean }): Promise<IncomingPayment[]>;
   /** generic GET passthrough (jetton wallet lookup) */
   raw?(path: string, params: Record<string, string>): Promise<any>;
 }
@@ -21,7 +21,9 @@ export class HttpError extends Error {
 
 export interface Deps { db: DB; cfg: Config; ton: Chain; tg: Tg; now?: () => number; log?: (m: string) => void }
 
-const OPEN_STATES = new Set(['WAITING', 'SHORT', 'UNMATCHED', 'FAKE']);
+const OPEN_STATES = new Set(['WAITING', 'SHORT', 'UNMATCHED', 'FAKE', 'CONFIRMING']);
+/** States an unmatched payment may be attached to. */
+const ATTACHABLE = new Set(['WAITING', 'SHORT', 'UNMATCHED', 'CONFIRMING']);
 const NOTIFY_STATES = new Set(['PAID', 'SHORT', 'EXTRA', 'DUPLICATE', 'FAKE', 'UNMATCHED', 'LATE']);
 const SALE_TTL = 15 * 60;
 const LIVE_WINDOW = 30 * 60;
@@ -246,15 +248,47 @@ export class Till {
     const { res, refOf } = this.compute(s);
     const counted = res.payments.filter((c) => c.verdict === 'COUNTED').map((c) => c.payment);
     const last = counted[counted.length - 1];
+    // Seen but not finalized: shown as CONFIRMING, never PAID.
+    const state = res.pendingRaw > 0n && (res.state === 'WAITING' || res.state === 'SHORT') ? 'CONFIRMING' : res.state;
     run(this.d.db,
       `UPDATE sales SET state=?, paid_raw=?, extra_raw=?, missing_raw=?, from_addr=?, paid_tx=?, paid_ref=?, paid_at=? WHERE id=?`,
-      res.state, res.paidRaw.toString(), res.extraRaw.toString(), res.missingRaw.toString(),
+      state, res.paidRaw.toString(), res.extraRaw.toString(), res.missingRaw.toString(),
       last?.from ?? null, last?.txHash ?? null, last ? refOf.get(last.txHash) ?? null : null, last?.utime ?? null, saleId);
-    if (res.state !== s.state) {
-      run(this.d.db, 'INSERT INTO sale_events(sale_id, state, at) VALUES(?,?,?)', saleId, res.state, this.nowSec());
+    this.recordTimings(saleId, res.payments.filter((c) => c.verdict === 'COUNTED' || c.verdict === 'PENDING').map((c) => c.payment), state);
+    if (state !== s.state) {
+      run(this.d.db, 'INSERT INTO sale_events(sale_id, state, at) VALUES(?,?,?)', saleId, state, this.nowSec());
       return true;
     }
     return false;
+  }
+
+  /** first_seen_at: first time a matching payment (pending or final) reached us. paid_detected_at: when we flipped to PAID. */
+  private recordTimings(saleId: string, matching: IncomingPayment[], state: string) {
+    if (!matching.length) return;
+    const nowMs = this.nowMs();
+    const first = matching[0]!;
+    let s = one(this.d.db, 'SELECT * FROM sales WHERE id=?', saleId);
+    if (s.first_seen_at == null) {
+      const seen = one(this.d.db, 'SELECT seen_at FROM payments WHERE tx_hash=?', first.txHash)?.seen_at ?? nowMs;
+      run(this.d.db, 'UPDATE sales SET first_seen_at=?, pay_utime=? WHERE id=?', seen, first.utime, saleId);
+    }
+    if ((state === 'PAID' || state === 'EXTRA') && s.paid_detected_at == null) {
+      run(this.d.db, 'UPDATE sales SET paid_detected_at=? WHERE id=?', nowMs, saleId);
+      s = one(this.d.db, 'SELECT * FROM sales WHERE id=?', saleId);
+      const t = this.timing(s);
+      if (t) this.log(`paid sale=${saleId} chain->seen=${t.seenAfterSec ?? '?'}s chain->paid=${t.paidAfterSec ?? '?'}s`);
+    }
+  }
+
+  /** {chainSec: payment utime, seenAfterSec, paidAfterSec}: seconds after the chain timestamp. */
+  private timing(s: any): { chainSec: number; seenAfterSec?: number; paidAfterSec?: number } | undefined {
+    if (s.pay_utime == null) return undefined;
+    const r1 = (ms: number) => Math.round((ms / 1000 - s.pay_utime) * 10) / 10;
+    return {
+      chainSec: s.pay_utime,
+      ...(s.first_seen_at != null ? { seenAfterSec: r1(s.first_seen_at) } : {}),
+      ...(s.paid_detected_at != null ? { paidAfterSec: r1(s.paid_detected_at) } : {}),
+    };
   }
 
   private money(s: any, raw: string | bigint) { return `${formatMoney(BigInt(raw), s.decimals)} ${s.asset}`; }
@@ -276,6 +310,8 @@ export class Till {
     };
     if (s.paid_at) out.sale.paidAt = s.paid_at;
     if (s.from_addr) out.sale.from = shortAddr(s.from_addr);
+    const timing = this.timing(s);
+    if (timing) out.timing = timing;
     if (s.state === 'EXTRA') out.sale.extra = formatMoney(BigInt(s.extra_raw), s.decimals);
     if (s.state === 'SHORT') out.sale.missing = formatMoney(BigInt(s.missing_raw), s.decimals);
     if (s.state === 'UNMATCHED' && s.asset && !(s.asset === 'USDT' && !this.d.cfg.usdt)) {
@@ -283,6 +319,8 @@ export class Till {
       if (u) out.unmatched = {
         amount: formatMoney(BigInt(u.payment.amountRaw), u.payment.decimals),
         from: shortAddr(u.payment.from), paymentId: u.payment.txHash,
+        asset: u.payment.asset.kind === 'native' ? 'GRAM' : 'USDT',
+        utime: u.payment.utime, ageSec: Math.max(0, now - u.payment.utime),
       };
     }
     return out;
@@ -294,6 +332,11 @@ export class Till {
     if (!s) throw new HttpError(404, 'no such sale');
     const p = one(this.d.db, 'SELECT * FROM payments WHERE tx_hash=? AND shop_id=? AND sale_id IS NULL', paymentId, shop.id);
     if (!p) throw new HttpError(404, 'no such unmatched payment');
+    // Only a payment that arrived during this sale may be attached to it, and only while the sale is still open.
+    if (s.voided_at !== null || this.nowSec() > s.expires_at || !ATTACHABLE.has(s.state)) throw new HttpError(409, 'sale is not open');
+    const pp = JSON.parse(p.payload) as IncomingPayment;
+    if (pp.utime < s.created_at) throw new HttpError(409, 'payment is older than the sale');
+    if (pp.pending) throw new HttpError(409, 'payment not finalized yet');
     run(this.d.db, 'UPDATE payments SET sale_id=? WHERE tx_hash=?', saleId, paymentId);
     this.evaluate(saleId);
     this.kick();
@@ -386,7 +429,7 @@ export class Till {
     try { open = await this.tick(); } catch (e) { this.log(`tick error: ${(e as Error).message}`); }
     this.ticking = false;
     if (this.stopped) return;
-    this.timer = setTimeout(this.loop, open ? 2000 : 30000);
+    this.timer = setTimeout(this.loop, open ? (this.d.cfg.tonKey ? 1000 : 2000) : 30000);
   };
   start() { this.stopped = false; this.timer = setTimeout(this.loop, 0); }
   stop() { this.stopped = true; if (this.timer) clearTimeout(this.timer); }
@@ -410,10 +453,10 @@ export class Till {
       const since = Math.min(...sales.map((s) => s.created_at)) - 60;
       try {
         const [nat, jet] = [
-          await this.d.ton.getIncomingTransactions(shop.address, since),
-          await this.d.ton.getJettonTransfersTo(shop.address, since),
+          await this.d.ton.getIncomingTransactions(shop.address, since, { includePending: true }),
+          await this.d.ton.getJettonTransfersTo(shop.address, since, { includePending: true }),
         ];
-        this.ingest(shop, [...nat, ...jet]);
+        this.ingest(shop, [...nat, ...jet], since);
       } catch (e) {
         this.log(`fetch error shop ${shopId}: ${(e as Error).message}`);
       }
@@ -432,9 +475,17 @@ export class Till {
     return open;
   }
 
-  private ingest(shop: any, pays: IncomingPayment[]) {
+  private ingest(shop: any, pays: IncomingPayment[], since: number) {
+    const seenNow = new Set(pays.map((p) => p.txHash));
     for (const p of pays) {
-      if (one(this.d.db, 'SELECT 1 FROM payments WHERE tx_hash=?', p.txHash)) continue;
+      const existing = one(this.d.db, 'SELECT payload FROM payments WHERE tx_hash=?', p.txHash);
+      if (existing) {
+        // a pending row that has now finalized: upgrade in place (keeps seen_at and the sale link)
+        if (!p.pending && (JSON.parse(existing.payload) as IncomingPayment).pending) {
+          run(this.d.db, 'UPDATE payments SET payload=? WHERE tx_hash=?', JSON.stringify(p), p.txHash);
+        }
+        continue;
+      }
       let saleId: string | null = null;
       let ref: string | null = null;
       const parsed = parseRef(p.comment);
@@ -447,6 +498,11 @@ export class Till {
       }
       run(this.d.db, 'INSERT OR IGNORE INTO payments(tx_hash, shop_id, sale_id, ref, payload, seen_at) VALUES(?,?,?,?,?,?)',
         p.txHash, shop.id, saleId, ref, JSON.stringify(p), this.nowMs());
+    }
+    // A pending row that vanished from the chain view (replaced, never finalized) must not hold a sale in CONFIRMING.
+    for (const r of all(this.d.db, 'SELECT tx_hash, payload FROM payments WHERE shop_id=?', shop.id)) {
+      const p = JSON.parse(r.payload) as IncomingPayment;
+      if (p.pending && p.utime >= since && !seenNow.has(r.tx_hash)) run(this.d.db, 'DELETE FROM payments WHERE tx_hash=?', r.tx_hash);
     }
   }
 

@@ -118,3 +118,28 @@ describe('real-world noise', () => {
     expect(r.state).toBe('WAITING');
   });
 });
+
+describe('pending (seen, not finalized) rows', () => {
+  it('a matching pending payment is never PAID: state stays WAITING, pendingRaw reports it', () => {
+    const r = classify(sale(), [pay({ pending: true })], AL, NOW);
+    expect(r.state).toBe('WAITING');
+    expect(r.paidRaw).toBe(0n);
+    expect(r.pendingRaw).toBe(12_000_000n);
+    expect(r.payments[0]!.verdict).toBe('PENDING');
+  });
+  it('pending does not produce FAKE, UNMATCHED or LATE', () => {
+    const fake = classify(sale(), [pay({ pending: true, asset: { kind: 'jetton', master: FAKE_M } })], AL, NOW);
+    expect(fake.state).toBe('WAITING');
+    expect(fake.pendingRaw).toBe(0n);
+    expect(classify(sale(), [pay({ pending: true, comment: null })], AL, NOW).state).toBe('WAITING');
+    expect(classify(sale(), [pay({ pending: true, utime: T0 + 2000 })], AL, T0 + 100).pendingRaw).toBe(0n);
+  });
+  it('pending never tops up a SHORT sale into PAID', () => {
+    const r = classify(sale(), [pay({ amountRaw: '9000000' }), pay({ amountRaw: '3000000', pending: true })], AL, NOW);
+    expect(r.state).toBe('SHORT');
+    expect(r.pendingRaw).toBe(3_000_000n);
+  });
+  it('the same payment once finalized is PAID', () => {
+    expect(classify(sale(), [pay()], AL, NOW).state).toBe('PAID');
+  });
+});

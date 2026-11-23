@@ -68,6 +68,11 @@ export function openDb(path: string): DB {
   const cols = (db.prepare('PRAGMA table_info(devices)').all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes('secret_hash')) db.exec('ALTER TABLE devices ADD COLUMN secret_hash TEXT');
   if (!cols.includes('code_at')) db.exec('ALTER TABLE devices ADD COLUMN code_at INTEGER');
+  const sCols = (db.prepare('PRAGMA table_info(sales)').all() as { name: string }[]).map((c) => c.name);
+  // per-sale timings: wall-clock ms when a matching payment was first seen / when PAID was detected, chain utime of that payment
+  for (const c of ['first_seen_at', 'paid_detected_at', 'pay_utime']) {
+    if (!sCols.includes(c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} INTEGER`);
+  }
   return db;
 }
 

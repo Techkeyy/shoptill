@@ -11,6 +11,8 @@ export interface IncomingPayment {
   amountRaw: string;
   decimals: number;
   comment: string | null;
+  /** seen on chain but not yet finalized (only returned with includePending). Never counts as paid. */
+  pending?: boolean;
 }
 
 export interface Sale {
@@ -37,6 +39,7 @@ export type SaleState =
 
 export type PaymentVerdict =
   | 'IGNORED' // failed, bounced, spam, older than the sale
+  | 'PENDING' // matching payment seen but not finalized: never PAID
   | 'COUNTED' | 'DUPLICATE' | 'FAKE' | 'UNMATCHED' | 'LATE';
 
 export interface ClassifiedPayment {
@@ -48,6 +51,8 @@ export interface ClassifiedPayment {
 export interface SaleResult {
   state: SaleState;
   paidRaw: bigint;
+  /** sum of matching, in-window payments that are seen but not finalized */
+  pendingRaw: bigint;
   /** paid - amount when state is EXTRA, else 0n */
   extraRaw: bigint;
   /** amount - paid when SHORT, else 0n */

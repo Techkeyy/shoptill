@@ -5,16 +5,20 @@ import {
   TextContainerProperty,
   CreateStartUpPageContainer,
   TextContainerUpgrade,
+  ImageContainerProperty,
+  ImageRawDataUpdate,
+  ImageRawDataUpdateResult,
 } from '@evenrealities/even_hub_sdk'
 import * as api from './api'
 import { makeDebouncer, normalizeEvent } from './events'
-import { PRESETS, nextPreset, render, type Screen, type Status, type View } from './screens'
+import { GEOM, amountKey, bigLayout, renderAmountPng, renderWordPng, wordKey, type BigLayout } from './bigtype'
+import { PRESETS, amountDiffers, nextPreset, render, type Screen, type Status, type View } from './screens'
 import { encodeWav } from './wav'
 
 const ASSET = 'USDT' as const
 const LISTEN_MS = 6000
 const POLL_MS = 2000
-const OPEN_STATES = ['WAITING', 'SHORT']
+const OPEN_STATES = ['WAITING', 'SHORT', 'CONFIRMING']
 const VOIDABLE = ['WAITING', 'SHORT', 'FAKE', 'UNMATCHED']
 
 const bridge = await waitForEvenAppBridge()
@@ -36,8 +40,48 @@ if (created !== 0) {
   await bridge.rebuildPageContainer(new RebuildPageContainer({ containerTotalNum: 3, textObject: layout() }))
 }
 
-// --- rendering: textContainerUpgrade only for lines that changed -----------
+// --- rendering --------------------------------------------------------------
+// Two page layouts. 'text': three text containers (idle/pair/listening and the fallback).
+// 'big': two 200x96 image containers (status word + glyph, amount) over two text lines.
+// Images cannot be sent in createStartUpPageContainer, so big mode = rebuildPageContainer with
+// the image containers, a short wait, then updateImageRawData (one at a time, never concurrent).
+// Any failure falls back to the text layout, so the screen is never blank or stuck.
 const shown: Screen = { l1: 'ShopTill', l2: '', l3: '' }
+let layoutMode: 'text' | 'big' = 'text'
+let imgShown: { word?: string; amount?: string } = {}
+let bigFails = 0
+const BIG_MAX_FAILS = 2
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
+
+const bigText = (id: number, name: string, y: number, h: number, content: string, cap = 0) => mk(id, name, y, h, content, cap)
+const bigImages = () => [GEOM.word, GEOM.amount].map((g) => new ImageContainerProperty({
+  xPosition: g.x, yPosition: g.y, width: g.w, height: g.h, containerID: g.id, containerName: g.name,
+}))
+
+async function toTextLayout() {
+  await bridge.rebuildPageContainer(new RebuildPageContainer({ containerTotalNum: 3, textObject: [mk(1, 'l1', 0, 110, '', 1), mk(2, 'l2', 110, 90, ''), mk(3, 'l3', 200, 88, '')] }))
+  layoutMode = 'text'; imgShown = {}
+  shown.l1 = ''; shown.l2 = ''; shown.l3 = ''
+}
+async function toBigLayout(b: BigLayout) {
+  const ok = await bridge.rebuildPageContainer(new RebuildPageContainer({
+    containerTotalNum: 4,
+    textObject: [
+      bigText(GEOM.detail.id, GEOM.detail.name, GEOM.detail.y, GEOM.detail.h, b.detail, 1),
+      bigText(GEOM.hint.id, GEOM.hint.name, GEOM.hint.y, GEOM.hint.h, b.hint),
+    ],
+    imageObject: bigImages(),
+  }))
+  if (!ok) throw new Error('rebuild to big layout refused')
+  layoutMode = 'big'; imgShown = {}
+  shown.l1 = b.detail; shown.l2 = b.hint; shown.l3 = ''
+  await sleep(100) // the host needs a moment to allocate the image containers
+}
+async function sendImage(g: { id: number; name: string }, png: Uint8Array) {
+  const r = await bridge.updateImageRawData(new ImageRawDataUpdate({ containerID: g.id, containerName: g.name, imageData: Array.from(png) }))
+  if (!ImageRawDataUpdateResult.isSuccess(r)) throw new Error(`image update failed: ${String(r)}`)
+}
+
 // Serialize renders: overlapping show() calls raced and left a stale line on screen
 // (UAT 2026-11-23: "Offline" title stuck above the pairing code).
 let renderChain: Promise<void> = Promise.resolve()
@@ -45,8 +89,7 @@ function show(view: View): Promise<void> {
   renderChain = renderChain.then(() => paint(view)).catch(() => {})
   return renderChain
 }
-async function paint(view: View) {
-  const sc = render(view)
+async function paintText(sc: Screen) {
   for (const [i, k] of [[1, 'l1'], [2, 'l2'], [3, 'l3']] as const) {
     if (sc[k] === shown[k]) continue
     shown[k] = sc[k]
@@ -54,6 +97,31 @@ async function paint(view: View) {
       new TextContainerUpgrade({ containerID: i, containerName: k, content: sc[k] }),
     )
   }
+}
+async function paintBig(b: BigLayout) {
+  if (layoutMode !== 'big') await toBigLayout(b)
+  for (const [i, k, v] of [[1, 'l1', b.detail], [2, 'l2', b.hint]] as const) {
+    if (shown[k] === v) continue
+    shown[k] = v
+    await bridge.textContainerUpgrade(new TextContainerUpgrade({ containerID: i, containerName: k, content: v }))
+  }
+  const wk = wordKey(b), ak = amountKey(b)
+  if (imgShown.word !== wk) { await sendImage(GEOM.word, renderWordPng(b)); imgShown.word = wk }
+  if (imgShown.amount !== ak) { await sendImage(GEOM.amount, renderAmountPng(b)); imgShown.amount = ak }
+}
+async function paint(view: View) {
+  const big = bigFails >= BIG_MAX_FAILS ? null : bigLayout(view)
+  if (big) {
+    try { await paintBig(big); bigFails = 0; return } catch (e) {
+      bigFails++
+      console.warn('big-type render failed, falling back to text', e)
+      // fall through to the text rendering below
+    }
+  }
+  try {
+    if (layoutMode === 'big') await toTextLayout()
+  } catch (e) { console.warn('rebuild to text layout failed', e) }
+  await paintText(render(view))
 }
 
 // --- device identity --------------------------------------------------------
@@ -94,6 +162,7 @@ let pollTimer: number | undefined
 let listenTimer: number | undefined
 let chunks: Uint8Array[] = []
 let micOn = false
+let attachConfirmed = false // second tap needed when the unmatched amount differs from the sale
 
 function goIdle() {
   mode = 'idle'; saleId = null; last = null; presetIdx = -1; stopPoll()
@@ -132,7 +201,7 @@ async function poll() {
     if (mode !== 'sale') return
     last = st
     if (st.sale) saleId = st.sale.saleId
-    if (st.unmatched) paymentId = st.unmatched.paymentId
+    if (st.unmatched) { if (paymentId !== st.unmatched.paymentId) attachConfirmed = false; paymentId = st.unmatched.paymentId }
     if (st.state === 'IDLE' || st.state === 'VOID') return goIdle()
     void show({ v: 'sale', status: st })
     // Polling continues only while the sale is open and unresolved.
@@ -199,6 +268,11 @@ async function onTap() {
         return flash('RECEIPT SENT', '', 2500, 'customer has it in Telegram')
       }
       if (st === 'UNMATCHED' && saleId && paymentId) {
+        if (last && amountDiffers(last) && !attachConfirmed) {
+          attachConfirmed = true
+          return void show({ v: 'sale', status: last, confirmAttach: true })
+        }
+        attachConfirmed = false
         try { await api.attach(deviceId, saleId, paymentId) } catch { /* poll will show truth */ }
         mode = 'sale'; return void poll()
       }

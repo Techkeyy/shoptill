@@ -21,8 +21,8 @@ const T0 = 1_800_000_000; // seconds
 class FakeChain implements Chain {
   native: IncomingPayment[] = [];
   jettons: IncomingPayment[] = [];
-  async getIncomingTransactions(_a: string, since: number) { return this.native.filter((p) => p.utime >= since); }
-  async getJettonTransfersTo(_a: string, since: number) { return this.jettons.filter((p) => p.utime >= since); }
+  async getIncomingTransactions(_a: string, since: number, o: { includePending?: boolean } = {}) { return this.native.filter((p) => p.utime >= since && (o.includePending || !p.pending)); }
+  async getJettonTransfersTo(_a: string, since: number, o: { includePending?: boolean } = {}) { return this.jettons.filter((p) => p.utime >= since && (o.includePending || !p.pending)); }
   rawCalls: { path: string; params: Record<string, string> }[] = [];
   jettonWallets: any[] = [{ address: '0:' + 'ab'.repeat(32), balance: '5000000' }];
   accountBalance = '300000000';
@@ -477,5 +477,109 @@ describe('pay balance + jetton-wallet endpoints', () => {
     expect(j.json).toMatchObject({ balance: '5000000', exists: true });
     e.chain.jettonWallets = [];
     expect((await call(jw, { 'x-tg-init-data': init })).json).toMatchObject({ balance: '0', exists: false });
+  });
+});
+
+
+describe('CONFIRMING (seen, not finalized) and timings', () => {
+  let e: Env;
+  let logs: string[];
+  beforeEach(async () => {
+    e = await setup();
+    logs = [];
+    (e.svc as any).d.log = (m: string) => logs.push(m);
+  });
+
+  it('a pending matching payment shows CONFIRMING, never PAID; finalizing flips to PAID', async () => {
+    const id = e.svc.arm(e.device, '12.00', 'GRAM').saleId;
+    const r = e.svc.mintRef(id, 777);
+    const p = pay({ comment: `st:${r}`, utime: T0 + 5, pending: true });
+    e.chain.native.push(p);
+    e.clock.ms = (T0 + 7) * 1000;
+    await e.svc.tick();
+    let st = e.svc.status(e.device);
+    expect(st.state).toBe('CONFIRMING');
+    expect(st.timing).toEqual({ chainSec: T0 + 5, seenAfterSec: 2 });
+    expect(e.tg.sent.filter((m) => m.chat === 555).length).toBe(0); // no seller DM for CONFIRMING
+    // finalized one tick later: the same tx upgrades in place
+    e.chain.native[0] = { ...p, pending: undefined };
+    e.clock.ms = (T0 + 9) * 1000;
+    await e.svc.tick();
+    st = e.svc.status(e.device);
+    expect(st.state).toBe('PAID');
+    expect(st.timing).toEqual({ chainSec: T0 + 5, seenAfterSec: 2, paidAfterSec: 4 });
+    expect(logs).toContain(`paid sale=${id} chain->seen=2s chain->paid=4s`);
+  });
+
+  it('a pending payment that disappears from the chain view releases the sale back to WAITING', async () => {
+    const id = e.svc.arm(e.device, '12.00', 'GRAM').saleId;
+    const r = e.svc.mintRef(id, 777);
+    e.chain.native.push(pay({ comment: `st:${r}`, pending: true }));
+    await e.svc.tick();
+    expect(e.svc.status(e.device).state).toBe('CONFIRMING');
+    e.chain.native.length = 0;
+    await e.svc.tick();
+    expect(e.svc.status(e.device).state).toBe('WAITING');
+  });
+
+  it('a pending FAKE-token or unreferenced payment does not trigger CONFIRMING', async () => {
+    const id = e.svc.arm(e.device, '12.00', 'USDT').saleId;
+    const r = e.svc.mintRef(id, 777);
+    e.chain.jettons.push(usdt('12000000', `st:${r}`, FAKE, { pending: true }), usdt('12000000', null, GOOD, { pending: true }));
+    await e.svc.tick();
+    expect(e.svc.status(e.device).state).toBe('WAITING');
+  });
+
+  it('watcher tick is 1 s with a TON Center key, 2 s without', async () => {
+    for (const [tonKey, want] of [['', 2000], ['k', 1000]] as const) {
+      const env = await setup(cfg({ tonKey }));
+      env.svc.arm(env.device, '12.00', 'GRAM');
+      const spy: number[] = [];
+      const real = globalThis.setTimeout;
+      (globalThis as any).setTimeout = (fn: any, ms: number) => { spy.push(ms); return real(fn, ms === 0 ? 0 : 60000); };
+      try { env.svc.start(); await new Promise((r) => real(r, 30)); } finally { (globalThis as any).setTimeout = real; env.svc.stop(); }
+      expect(spy).toContain(want);
+    }
+  });
+});
+
+describe('UNMATCHED attach safety', () => {
+  let e: Env;
+  beforeEach(async () => { e = await setup(); });
+
+  it('status carries amount, sender, age and asset for the glasses', async () => {
+    e.svc.arm(e.device, '12.00', 'GRAM');
+    e.chain.native.push(pay({ comment: null, utime: T0 + 5, amountRaw: '9000000000' }));
+    e.clock.ms = (T0 + 65) * 1000;
+    await e.svc.tick();
+    const st = e.svc.status(e.device);
+    expect(st.state).toBe('UNMATCHED');
+    expect(st.unmatched).toMatchObject({ amount: '9.00', asset: 'GRAM', ageSec: 60, utime: T0 + 5 });
+    expect(st.unmatched.from.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('refuses a payment older than the sale and a voided/expired sale', async () => {
+    const id = e.svc.arm(e.device, '12.00', 'GRAM').saleId;
+    // inject a pre-sale unmatched payment directly (the classifier hides it, but the API must still refuse it)
+    const old = pay({ comment: null, utime: T0 - 100 });
+    (e.svc as any).d.db.prepare('INSERT INTO payments(tx_hash, shop_id, sale_id, ref, payload, seen_at) VALUES(?,?,?,?,?,?)')
+      .run(old.txHash, e.shopId, null, null, JSON.stringify(old), 1);
+    expect(() => e.svc.attach(e.device, id, old.txHash)).toThrow(/older than the sale/);
+    expect(e.svc.status(e.device).state).toBe('WAITING');
+    const fresh = pay({ comment: null, utime: T0 + 5 });
+    (e.svc as any).d.db.prepare('INSERT INTO payments(tx_hash, shop_id, sale_id, ref, payload, seen_at) VALUES(?,?,?,?,?,?)')
+      .run(fresh.txHash, e.shopId, null, null, JSON.stringify(fresh), 1);
+    e.svc.void(e.device, id);
+    expect(() => e.svc.attach(e.device, id, fresh.txHash)).toThrow(/not open/);
+  });
+
+  it('a payment already attached to one sale cannot be attached to another', async () => {
+    const id = e.svc.arm(e.device, '12.00', 'GRAM').saleId;
+    e.chain.native.push(pay({ comment: null, utime: T0 + 5 }));
+    await e.svc.tick();
+    const pid = e.svc.status(e.device).unmatched.paymentId;
+    e.svc.attach(e.device, id, pid);
+    const second = e.svc.arm(e.device, '12.00', 'GRAM').saleId;
+    expect(() => e.svc.attach(e.device, second, pid)).toThrow(/no such unmatched/);
   });
 });

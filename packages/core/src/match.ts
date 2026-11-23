@@ -37,6 +37,7 @@ export function classify(
 ): SaleResult {
   const out: ClassifiedPayment[] = [];
   let paid = 0n;
+  let pendingRaw = 0n;
   let closed = false;
   let extra = 0n;
   const ref = sale.ref.toLowerCase();
@@ -44,8 +45,18 @@ export function classify(
   for (const p of [...payments].sort(cmpLt)) {
     const add = (verdict: ClassifiedPayment['verdict'], reason: string) =>
       out.push({ payment: p, verdict, reason });
+    // A non-finalized payment can only ever produce PENDING (see below); everything else about it is ignored.
+    if (p.pending) {
+      const parsedP = parseRef(p.comment);
+      const ok = p.success && p.utime >= sale.createdAt && parsedP !== null && parsedP.ref === ref
+        && allowlisted(p.asset, allowlist) && sameAsset(p.asset, sale.asset)
+        && !(p.utime > sale.expiresAt || (sale.voidedAt !== null && p.utime >= sale.voidedAt));
+      if (ok) { pendingRaw += BigInt(p.amountRaw); add('PENDING', 'seen, not finalized'); }
+      else add('IGNORED', 'pending and not a match');
+      continue;
+    }
 
-    // 1. success (client only returns finalized txs)
+    // 1. success (the client returns only finalized txs unless includePending)
     if (!p.success) { add('IGNORED', 'failed or bounced'); continue; }
     if (p.utime < sale.createdAt) { add('IGNORED', 'before sale'); continue; }
 
@@ -87,7 +98,7 @@ export function classify(
   else state = 'WAITING';
 
   return {
-    state, paidRaw: paid,
+    state, paidRaw: paid, pendingRaw,
     extraRaw: state === 'EXTRA' ? extra : 0n,
     missingRaw: state === 'SHORT' ? sale.amountRaw - paid : 0n,
     payments: out,

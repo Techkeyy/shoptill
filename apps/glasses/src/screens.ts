@@ -11,7 +11,9 @@ export const MAX_TOTAL = 450
 export type Screen = { l1: string; l2: string; l3: string }
 
 export interface Sale { saleId: string; amount: string; asset: string; receivedTotal?: string; from?: string; ageSec?: number; paidAt?: number; extra?: string; missing?: string }
-export interface Status { state: string; sale?: Sale; unmatched?: { amount: string; from: string; paymentId: string } }
+export interface Unmatched { amount: string; from: string; paymentId: string; asset?: string; ageSec?: number; utime?: number }
+export interface Timing { chainSec: number; seenAfterSec?: number; paidAfterSec?: number }
+export interface Status { state: string; sale?: Sale; unmatched?: Unmatched; timing?: Timing }
 
 export type View =
   | { v: 'pair'; code?: string }
@@ -21,7 +23,7 @@ export type View =
   | { v: 'offline' }
   | { v: 'receipt' }
   | { v: 'today'; count: number; total: string; asset: string }
-  | { v: 'sale'; status: Status }
+  | { v: 'sale'; status: Status; confirmAttach?: boolean }
   | { v: 'preset'; amount: number; asset: string }
 
 export const PRESETS = [5, 10, 12, 20, 50]
@@ -51,12 +53,37 @@ export function nextPreset(idx: number, dir: 'up' | 'down'): number {
   return (idx + (dir === 'up' ? 1 : n - 1)) % n
 }
 
-export function renderSale(st: Status): Screen {
+/** "5s ago" / "3 min ago" / "2h ago". */
+export function ageText(sec?: number): string {
+  if (sec === undefined || !Number.isFinite(sec) || sec < 0) return ''
+  if (sec < 60) return `${Math.floor(sec)}s ago`
+  if (sec < 3600) return `${Math.floor(sec / 60)} min ago`
+  return `${Math.floor(sec / 3600)}h ago`
+}
+
+/** True when an unmatched payment's amount differs from the open sale's amount. */
+export function amountDiffers(st: Status): boolean {
+  const u = st.unmatched, s = st.sale
+  if (!u || !s) return true
+  const a = Number(u.amount), b = Number(s.amount)
+  return !Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a - b) > 1e-9
+}
+
+/** Hint line for the UNMATCHED screen: a differing amount needs a second tap. */
+export function attachHint(st: Status, confirming: boolean): string {
+  if (!amountDiffers(st)) return 'tap: attach to open sale'
+  const sale = st.sale?.amount ?? '?'
+  return confirming ? `AMOUNT DIFFERS (sale ${sale}): tap again to attach` : `amount differs from ${sale}: tap twice to attach`
+}
+
+export function renderSale(st: Status, confirmAttach = false): Screen {
   const s = st.sale
   const amt = money(s)
   switch (st.state) {
     case 'WAITING':
       return { l1: `READY  ${amt}`, l2: `waiting for payment${G.ell}`, l3: '2x tap: cancel sale' }
+    case 'CONFIRMING':
+      return { l1: `PAYMENT SEEN  ${amt}`, l2: `confirming${G.ell} not paid yet`, l3: 'wait - do not hand over yet' }
     case 'PAID':
       return { l1: `PAID  ${amt}`, l2: `from ${shortAddr(s?.from)}${clock(s?.paidAt)}`, l3: 'tap: send receipt' }
     case 'EXTRA':
@@ -69,7 +96,8 @@ export function renderSale(st: Status): Screen {
       return { l1: `${G.warn} FAKE TOKEN - NOT PAID`, l2: `${amt} wrong token`, l3: 'tap: ok  ' + G.sep + '  do NOT hand over goods' }
     case 'UNMATCHED': {
       const u = st.unmatched
-      return { l1: `UNMATCHED  ${u?.amount ?? ''}`, l2: `from ${shortAddr(u?.from)} ${G.sep} no sale ref`, l3: 'tap: attach to open sale' }
+      const age = ageText(u?.ageSec)
+      return { l1: `UNMATCHED  ${u?.amount ?? ''} ${u?.asset ?? ''}`.trimEnd(), l2: `from ${shortAddr(u?.from)}${age ? ` ${G.sep} ${age}` : ''}`, l3: attachHint(st, confirmAttach) }
     }
     case 'LATE':
       return { l1: `LATE PAYMENT  ${amt}`, l2: `after sale closed ${G.sep} from ${shortAddr(s?.from)}`, l3: 'tap: ok' }
@@ -91,7 +119,7 @@ export function render(view: View): Screen {
     case 'receipt': sc = { l1: 'RECEIPT SENT', l2: 'customer has it in Telegram', l3: '' }; break
     case 'today': sc = { l1: `Today: ${view.count} sales ${G.sep} ${view.total}`, l2: view.asset, l3: 'swipe up: back' }; break
     case 'msg': sc = { l1: view.text, l2: view.sub ?? '', l3: view.hint ?? 'tap: ok' }; break
-    case 'sale': sc = renderSale(view.status); break
+    case 'sale': sc = renderSale(view.status, view.confirmAttach); break
   }
   const out = { l1: clip(sc.l1), l2: clip(sc.l2), l3: clip(sc.l3) }
   const total = out.l1.length + out.l2.length + out.l3.length

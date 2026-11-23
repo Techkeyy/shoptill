@@ -53,3 +53,26 @@ describe('toncenter pagination', () => {
     expect(calls).toHaveLength(2);
   });
 });
+
+describe('toncenter includePending', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const ok = { aborted: false, credit_ph: { credit: '5000000' }, bounce: null };
+  const rows = () => [
+    { ...tx(ok), hash: 'FIN' },
+    { ...tx(ok), hash: 'PEND', finality: 'pending' },
+    { ...tx(ok), hash: 'CONF', finality: 'confirmed' },
+  ];
+
+  it('default: non-finalized rows are skipped (unchanged behavior)', async () => {
+    mockTxs(rows());
+    const ps = await client().getIncomingTransactions(DST, 0);
+    expect(ps.map((p) => p.txHash)).toEqual(['FIN']);
+    expect(ps[0]!.pending).toBeUndefined();
+  });
+
+  it('includePending: non-finalized rows come back flagged pending', async () => {
+    mockTxs(rows());
+    const ps = await client().getIncomingTransactions(DST, 0, { includePending: true });
+    expect(ps.map((p) => [p.txHash, p.pending ?? false])).toEqual([['FIN', false], ['PEND', true], ['CONF', true]]);
+  });
+});
