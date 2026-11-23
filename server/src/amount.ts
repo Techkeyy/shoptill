@@ -85,6 +85,11 @@ export function parseAmount(text: string): { amount: string | null; asset: Asset
   const lower = (text ?? '').toLowerCase().replace(/\$/g, ' dollars ').replace(/[-]/g, ' ');
   const cleaned = lower.replace(/(\d),(\d{3})(?!\d)/g, '$1$2').replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
   const rawTokens = cleaned.match(/\d+(?:\.\d+)?|[a-z]+/g) ?? [];
+  // "point five" with nothing before it means 0.5
+  for (let i = 0; i < rawTokens.length; i++) {
+    const prev = rawTokens[i - 1];
+    if (rawTokens[i] === 'point' && (prev === undefined || !(prev in UNITS || prev in TENS || prev in SCALES))) { rawTokens.splice(i, 0, 'zero'); i++; }
+  }
 
   let asset: AssetName | null = null;
   for (const t of rawTokens) {

@@ -43,7 +43,10 @@ const cases: [string, string | null, A][] = [
   ['zero', null, 'USDT'],
   ['0', null, 'USDT'],
   ['gram', null, 'GRAM'],
-  ['point five', null, 'USDT'],
+  ['point five', '0.50', 'USDT'],
+  ['point one gram', '0.10', 'GRAM'],
+  ['zero point one gram', '0.10', 'GRAM'],
+  ['0.1 gram', '0.10', 'GRAM'],
   ['one two three four', null, 'USDT'],
   ['99999999', null, 'USDT'],
 ];

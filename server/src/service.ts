@@ -42,9 +42,9 @@ export const shortAddr = (a: string, testOnly = true) => {
   } catch { return a.slice(0, 4) + '…' + a.slice(-3); }
 };
 
-export function tonviewerLink(hash: string): string {
+export function tonviewerLink(hash: string, network: 'testnet' | 'mainnet' = 'testnet'): string {
   const hex = /^[0-9a-f]{64}$/i.test(hash) ? hash.toLowerCase() : Buffer.from(hash.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('hex');
-  return `https://testnet.tonviewer.com/transaction/${hex}`;
+  return `https://${network === 'mainnet' ? '' : 'testnet.'}tonviewer.com/transaction/${hex}`;
 }
 
 export class Till {
@@ -377,7 +377,7 @@ export class Till {
     const lines = [
       'Receipt', `${this.money(s, s.amount_raw)} paid to ${shop.name}`,
       s.state === 'EXTRA' ? `(you sent ${this.money(s, s.paid_raw)}, ${this.money(s, s.extra_raw)} extra)` : '',
-      when, s.paid_tx ? `Tx: ${tonviewerLink(s.paid_tx)}` : '',
+      when, s.paid_tx ? `Tx: ${tonviewerLink(s.paid_tx, this.d.cfg.network)}` : '',
     ].filter(Boolean);
     // claim first so a double tap cannot send two receipts; release if Telegram fails
     run(this.d.db, 'UPDATE sales SET receipt_sent=1 WHERE id=?', saleId);
