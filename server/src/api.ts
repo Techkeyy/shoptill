@@ -165,8 +165,8 @@ export function createApi(d: ApiDeps) {
           return json(200, { ok: true });
         }
       }
-      // The landing page judges and visitors see at the bare domain.
-      if (r.method === 'GET' && r.path === '/') return serveStatic('/pay/landing.html');
+      // The bare domain sends visitors to the public landing page (site/, hosted on Vercel).
+      if (r.method === 'GET' && r.path === '/') return { status: 302, headers: { ...CORS, location: 'https://shoptill.vercel.app/' }, body: '' };
       if (r.method === 'GET' && (r.path.startsWith('/pay') || r.path === '/icon.png')) return serveStatic(r.path);
       return json(404, { error: 'not found' });
     } catch (e) {
