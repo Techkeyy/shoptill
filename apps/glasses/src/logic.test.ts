@@ -104,3 +104,15 @@ describe('voice confirm screen', () => {
     expect(sc.l3).toMatch(/2x tap: say again/)
   })
 })
+
+describe('chain check delayed', () => {
+  const sale = { saleId: 's', amount: '12.50', asset: 'USDT' }
+  it('text screen warns instead of "waiting"', () => {
+    const sc = renderSale({ state: 'WAITING', sale, chainDelayed: true })
+    expect(sc.l1).toMatch(/CHECK DELAYED/)
+    expect(sc.l3).toMatch(/do NOT hand over/)
+  })
+  it('does not override a final state', () => {
+    expect(renderSale({ state: 'PAID', sale, chainDelayed: true }).l1).toMatch(/^PAID/)
+  })
+})

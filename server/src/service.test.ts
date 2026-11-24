@@ -300,6 +300,21 @@ describe('payment routing and states', () => {
   });
 });
 
+describe('chain check delayed', () => {
+  it('an open sale reports chainDelayed when the chain has not been read for >15 s, and clears after a good read', async () => {
+    const { svc, clock, device } = await setup();
+    svc.arm(device, '5', 'USDT');
+    await svc.tick();
+    expect(svc.status(device).chainDelayed).toBeUndefined();
+    clock.ms += 20_000; // no successful read for 20 s
+    const st = svc.status(device);
+    expect(st.state).toBe('WAITING');
+    expect(st.chainDelayed).toBe(true);
+    await svc.tick();
+    expect(svc.status(device).chainDelayed).toBeUndefined();
+  });
+});
+
 describe('bot UX', () => {
   const msg = (chat: number, text: string) => ({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, text } }) as any;
   it('/start for a new user explains setup; for a ready seller shows the button menu', async () => {

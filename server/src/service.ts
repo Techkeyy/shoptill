@@ -22,6 +22,9 @@ export class HttpError extends Error {
 export interface Deps { db: DB; cfg: Config; ton: Chain; tg: Tg; now?: () => number; log?: (m: string) => void }
 
 const OPEN_STATES = new Set(['WAITING', 'SHORT', 'UNMATCHED', 'FAKE', 'CONFIRMING']);
+/** States where "nothing happened yet" could be misread when the chain is not being read. */
+const STALE_CHECK_STATES = new Set(['WAITING', 'SHORT', 'CONFIRMING']);
+export const CHAIN_STALE_MS = 15_000;
 /** States an unmatched payment may be attached to. */
 const ATTACHABLE = new Set(['WAITING', 'SHORT', 'UNMATCHED', 'CONFIRMING']);
 const NOTIFY_STATES = new Set(['PAID', 'SHORT', 'EXTRA', 'DUPLICATE', 'FAKE', 'UNMATCHED', 'LATE']);
@@ -51,6 +54,8 @@ export class Till {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
   private ticking = false;
+  /** Last time the chain was read successfully, per shop (ms). Silence must never look like "not paid yet". */
+  private chainOkAt = new Map<number, number>();
   constructor(private d: Deps) {}
 
   private nowMs() { return this.d.now ? this.d.now() : Date.now(); }
@@ -316,6 +321,13 @@ export class Till {
       },
     };
     if (s.paid_at) out.sale.paidAt = s.paid_at;
+    // If the server has not read the chain for a while (TON Center down, rate limit, stuck watcher),
+    // say so: an open sale must not look like "still waiting" when nobody is actually checking.
+    if (STALE_CHECK_STATES.has(s.state)) {
+      const since = Math.max(this.chainOkAt.get(shop.id) ?? 0, s.created_at * 1000);
+      const age = this.nowMs() - since;
+      if (age > CHAIN_STALE_MS) { out.chainDelayed = true; out.chainAgeSec = Math.floor(age / 1000); }
+    }
     if (s.from_addr) out.sale.from = shortAddr(s.from_addr, this.d.cfg.network === 'testnet');
     const timing = this.timing(s);
     if (timing) out.timing = timing;
@@ -464,6 +476,7 @@ export class Till {
           await this.d.ton.getJettonTransfersTo(shop.address, since, { includePending: true }),
         ];
         this.ingest(shop, [...nat, ...jet], since);
+        this.chainOkAt.set(shopId, this.nowMs());
       } catch (e) {
         this.log(`fetch error shop ${shopId}: ${(e as Error).message}`);
       }

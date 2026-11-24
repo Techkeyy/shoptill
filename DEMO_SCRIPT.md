@@ -1,5 +1,7 @@
 # ShopTill demo script (target 2:50, hard limit 3:00)
 
+The seller in this demo is a crypto-native seller doing a face-to-face trade: a P2P USDT trader swapping cash for USDT (an event booth works the same way). The buyer already has a TON wallet.
+
 Built around one moment a rival cannot show: **a screenshot does nothing, and only a real on-chain payment flips the glasses to PAID. Then a look-alike USDT with the right reference is refused.**
 
 **Climax line (say it slowly, then stay silent for one full second, hands off the mouse):**
@@ -41,17 +43,17 @@ Everything on screen is the real product against the live server on TON testnet.
 **Caption:** `"I already paid." (a screenshot)` then `Glasses: READY. Still waiting.`
 
 **Say**
-> "She says she paid, and she's showing me a screenshot. I can't tell if it's real. My hands are full. But my glasses can."
+> "I'm selling USDT for cash, face to face. They say they sent it, and they're showing me a screenshot. I can't tell if it's real, and I don't want to look down at my phone. But my glasses can."
 
 **Why:** the first 15 seconds carry the real product and the problem together. No logo, no intro.
 
 ### Scene 2 · 0:15 to 0:35 · Who it hurts
 
 **On screen**
-1. Hold on the glasses. Overlay three text cards, one per second pair: "Barbers. Coffee stands. Pop-up sellers." then "Fake payment screenshots are a named fraud." then "Shops pay monthly for a speaker that says 'you were paid'."
+1. Hold on the glasses. Overlay three text cards, one per second pair: "P2P USDT traders. Event booths. Telegram sellers handing over goods." then "Fake screenshots and fake tokens are a named fraud." then "People already pay monthly for a speaker that says 'you were paid'."
 
 **Say**
-> "Fake payment screenshots are a known fraud for anyone who sells face to face. Shops already pay monthly for a soundbox that announces payments out loud. Glasses have no speaker. ShopTill is the silent version: only I see it, and it reads the chain, not a bank message."
+> "Fake screenshots are a known fraud for anyone who takes payment face to face. If you trade crypto in person, you check tonviewer by hand. In India, shops already pay monthly for a soundbox that announces payments out loud. Glasses have no speaker. ShopTill is the silent version for crypto sellers: only I see it, and it reads the chain, not a screenshot."
 
 ### Scene 3 · 0:35 to 1:00 · Say the price
 
@@ -75,7 +77,7 @@ Everything on screen is the real product against the live server on TON testnet.
 5. Tab A: tap. Cut to Tab B: the customer's Telegram shows the receipt with the tonviewer link.
 
 **Say**
-> "The screenshot changes nothing. The glasses stay on waiting. Now she pays for real, in her own wallet. The money goes straight to me, and only when the TON chain confirms it do my glasses say PAID. Twelve USDT, and here's the transaction. One tap and she gets a receipt in Telegram."
+> "The screenshot changes nothing. The glasses stay on waiting. Now they pay for real, in their own wallet. The money goes straight to me, and only when the TON chain confirms it do my glasses say PAID. Twelve USDT, and here's the transaction. One tap and they get a receipt in Telegram."
 
 **Why stillness:** the viewer must see that nothing happens. Silence here is the setup for the payoff.
 
@@ -90,11 +92,11 @@ Everything on screen is the real product against the live server on TON testnet.
 6. **Stop moving the mouse. Say the climax line. Stay silent one full second.**
 
 **Say**
-> "Scammers airdrop look-alike tokens. This is an attack, on purpose. A look-alike USDT, the right reference, the right amount. A naive watcher says PAID. My glasses say fake, not paid. The glasses believe the chain. Not the customer."
+> "This is the exact P2P scam. Scammers send a look-alike token. This is an attack, on purpose. A look-alike USDT, the right reference, the right amount. A quick glance or a naive watcher says PAID. My glasses say fake, not paid. The glasses believe the chain. Not the customer."
 
 **Staging (read carefully):**
 - The reference for a live sale is minted when the customer opens the Mini App. The attacker needs it: copy the `ref=` value from the Mini App URL (or the sale reference the bot shows), and the seller address from `/wallet`.
-- The send logic already exists: `sendJetton(master, amountRaw, ref)` in `server/scripts/live-states.ts` and `packages/core/scripts/pay.ts`, using the fake master from `.secrets/testnet-jettons.json`. **A small CLI wrapper that takes the seller address and a ref and sends the fake jetton does not exist yet. Build it before recording** (`packages/core/scripts/fake-send.ts`, gitignored secrets only, no keys in the repo).
+- The send logic already exists: `sendJetton(master, amountRaw, ref)` in `server/scripts/live-states.ts` and `packages/core/scripts/pay.ts`, using the fake master from `.secrets/testnet-jettons.json`. The CLI wrapper exists: `packages/core/scripts/demo-send.ts --to <seller> --amount 12 --token fake|usdt|gram [--ref <ref>] [--no-comment]` (testnet only, reads gitignored secrets).
 - **Fallback if the wrapper is not ready:** show the recorded 8/8 edge-state run. Label it on screen "recorded harness run, 2026-11-23, real testnet", show the FAKE row and open the transaction https://testnet.tonviewer.com/transaction/f6d75e2a8150d5fd7f26b42781d845646ae7b68740643aa3f767f761362038d1. Say "this was the same attack, run through the real service" so it is not passed off as live.
 - Confirm the customer wallet holds at least 1 of the fake jetton (the live-states harness needs 1.00 fake USDT).
 
@@ -113,7 +115,7 @@ Everything on screen is the real product against the live server on TON testnet.
 **On screen:** Tab A, glasses showing the last PAID. Small caption: `Testnet demo. Never holds keys or funds.`
 
 **Say**
-> "This is a testnet demo. ShopTill never holds anyone's money. The customer pays the seller directly, and the glasses only tell the truth."
+> "This is a testnet demo. The same build also took one real mainnet payment. ShopTill never holds anyone's money. The buyer pays the seller directly."
 
 No outro card, no music sting, no thank-you slide.
 
@@ -123,11 +125,11 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 
 ## Do not claim
 
-- Do not say or imply a mainnet payment through ShopTill. The mainnet run was a read-only replay.
+- Do not show or imply the demo itself is mainnet. Only say "the same build also took one real mainnet payment" (0.1 GRAM, `evidence/mainnet-pilot.md`). The 2,815-payment mainnet run was a read-only replay.
 - Do not say the 2,815-payment replay shows detection. It shows nothing was falsely counted; no real payment was matched to a sale.
 - Do not say it works on physical G2 hardware. It ran in the simulator.
-- Do not say the seller is alerted when the glasses app is closed. The bot DM exists but is not tested on a live run.
-- Do not give a latency number unless you saw it in this take. Say "when the chain confirms".
+- Do not say the glasses alert the seller when the app is closed. They can't (Even Hub limit). The bot DM goes to the phone instead.
+- Do not give a latency number unless you saw it in this take. Say "when the chain confirms". (Measured: about 2 s on testnet, 5.5 s on the mainnet pilot.)
 - Do not say Gram Wallet paid in the demo. Gram Wallet is mainnet only; the testnet customer is Tonkeeper testnet, connected with TON Connect.
 - Do not say it integrates TON Pay or has paying customers. Pricing and TVM fit are plans.
 - Do not present the fallback harness clip as a live attack.

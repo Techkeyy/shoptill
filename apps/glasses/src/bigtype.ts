@@ -44,6 +44,9 @@ export function bigLayout(view: View): BigLayout | null {
   if (view.v !== 'sale') return null
   const st = view.status
   const s = st.sale
+  if (st.chainDelayed && ['WAITING', 'CONFIRMING', 'SHORT'].includes(st.state)) {
+    return { glyph: 'warn', word: 'DELAYED', amount: money(s), sub: asset(s), detail: 'chain check delayed - not confirmed', hint: 'do NOT hand over yet' }
+  }
   switch (st.state) {
     case 'WAITING':
       return { glyph: 'wait', word: 'READY', amount: money(s), sub: asset(s), detail: `waiting for payment${G.ell}`, hint: '2x tap: cancel sale' }

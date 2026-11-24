@@ -13,7 +13,7 @@ export type Screen = { l1: string; l2: string; l3: string }
 export interface Sale { saleId: string; amount: string; asset: string; receivedTotal?: string; from?: string; ageSec?: number; paidAt?: number; extra?: string; missing?: string }
 export interface Unmatched { amount: string; from: string; paymentId: string; asset?: string; ageSec?: number; utime?: number }
 export interface Timing { chainSec: number; seenAfterSec?: number; paidAfterSec?: number }
-export interface Status { state: string; sale?: Sale; unmatched?: Unmatched; timing?: Timing }
+export interface Status { state: string; sale?: Sale; unmatched?: Unmatched; timing?: Timing; chainDelayed?: boolean; chainAgeSec?: number }
 
 export type View =
   | { v: 'pair'; code?: string }
@@ -80,6 +80,9 @@ export function attachHint(st: Status, confirming: boolean): string {
 export function renderSale(st: Status, confirmAttach = false): Screen {
   const s = st.sale
   const amt = money(s)
+  if (st.chainDelayed && ['WAITING', 'CONFIRMING', 'SHORT'].includes(st.state)) {
+    return { l1: `${G.warn} CHECK DELAYED  ${amt}`, l2: 'chain check delayed - not confirmed', l3: 'do NOT hand over yet' }
+  }
   switch (st.state) {
     case 'WAITING':
       return { l1: `READY  ${amt}`, l2: `waiting for payment${G.ell}`, l3: '2x tap: cancel sale' }

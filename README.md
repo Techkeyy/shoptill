@@ -6,7 +6,9 @@
 
 **[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Pay page](https://shoptill.103-195-188-198.sslip.io)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Feature requests](FEATURE_REQUESTS.md) · [Demo script](DEMO_SCRIPT.md)
 
-ShopTill is a silent soundbox for Even G2 glasses. It is for people who take payments face to face with busy hands: barbers, coffee stands, pop-up sellers, tattoo artists, trainers.
+ShopTill is a silent soundbox for Even G2 glasses. It is for crypto-native sellers who take payments face to face, where the buyer already has a TON wallet. The lead case is the in-person P2P USDT trader: someone who swaps cash for USDT with a stranger, and today checks tonviewer by hand. Fake tokens and fake "sent" screenshots hit these traders directly. Other cases are booths and bars at TON and crypto events and meetups, and Telegram sellers who hand over goods in person. In short, anyone already paid in crypto face to face.
+
+Why glasses: the seller keeps their eyes on the person and the goods, not on a phone. The glasses show PAID only after the chain confirms, and they flag look-alike (fake) tokens, which a hand check or a naive watcher can miss.
 
 > *"They say they paid. Is it real, or is that a screenshot?"*
 
@@ -14,9 +16,11 @@ Heads Up: Even Realities hackathon. Tracks: **Crypto & DeFi** (main; TON chain a
 
 ## Why this exists
 
-Fake "payment successful" screenshots are a named fraud for offline vendors. The usual advice is to check the account instead, which means stopping work and taking out the phone. In India, merchants already pay a monthly fee for a soundbox that announces each payment aloud (about Rs 125 to 150 a month per a 2023 BofA study, as cited in my research notes). They pay just to be told "you were paid", and that proves the habit.
+Fake "payment successful" screenshots are a named fraud for offline vendors. The usual advice is to check the account instead, which means looking down at a phone or explorer while the other person stands in front of you. For a P2P USDT trader, that check is a manual tonviewer lookup in the middle of a trade.
 
-On TON there is an extra trap: scammers airdrop fake USDT jettons, and a naive watcher that sees "1 USDT arrived" shows PAID for a worthless token.
+On TON there is an extra trap, and it is the headline risk: scammers airdrop fake look-alike USDT jettons, and a naive watcher or a quick glance that sees "1 USDT arrived" shows PAID for a worthless token. ShopTill checks the token against an allowlist and shows FAKE TOKEN, NOT PAID.
+
+As a side signal, merchants in India already pay a monthly fee for a soundbox that announces each payment aloud (about Rs 125 to 150 a month per a 2023 BofA study, as cited in my research notes). That is not the target customer. It shows that people will pay just to be told "you were paid".
 
 ```
  customer shows a screenshot                 ShopTill ignores it
@@ -168,12 +172,25 @@ npm test -w @shoptill/core        # 29 tests
 
 ## Business
 
-- **Market signal (public reporting, not verified by me):** merchants pay monthly for soundboxes that say "you were paid" (Paytm Soundbox, about Rs 125 to 150 a month per a 2023 BofA study, from my research notes). Fake screenshots are a named fraud in the payment-provider guides I read.
+- **Target user:** crypto-native sellers who take payments face to face and whose buyers already hold TON: in-person P2P USDT traders first, then booths and bars at TON and crypto events, and Telegram sellers who hand over goods in person.
+- **Proof that people pay to be told "you were paid" (public reporting, not verified by me):** merchants pay monthly for soundboxes (Paytm Soundbox, about Rs 125 to 150 a month per a 2023 BofA study, from my research notes). Those merchants are not the target customer. Fake screenshots are a named fraud in the payment-provider guides I read.
 - **Versus a soundbox:** silent and private (only the seller sees it), reads the chain instead of a bank callback, and flags look-alike tokens. A soundbox needs dedicated hardware; ShopTill needs glasses the seller already wears.
-- **Pricing (PLANNED, untested):** about $5 a month per till. Nobody has paid for it.
+- **Pricing (PLANNED, untested):** free for sellers. Revenue would come from the bundle or partner deal under Limits and trust. Nobody has paid for it.
 - **TON Pay (PLANNED):** TON Pay is a checkout for online merchants. ShopTill is the counter-side confirmation for face-to-face sales, so I see them as complementary. No TON Pay integration exists.
 - **TVM PayFi fit (PLANNED):** TVM invests in payment finance on TON, and ShopTill is a payment-truth layer for in-person TON payments. This is positioning only; there has been no contact with TVM.
 - **Other surfaces (PLANNED):** the server is a payment-truth service, so a phone widget or a physical soundbox could use the same API. Only the G2 app is built.
+
+## Limits and trust
+
+- **Till mode, not always-on.** G2 shows one app at a time, and Even Hub has no way to alert the wearer while the app is closed (see [FEATURE_REQUESTS.md](FEATURE_REQUESTS.md) item 1). So the seller opens ShopTill per sale, like a card terminal, from saying the price until PAID. Payments that arrive after they switch away reach their phone instead (bot DM, `/today`) and show as LATE or UNMATCHED.
+- **Who you trust.** The seller no longer trusts a screenshot. They trust the ShopTill server to read the chain. Mitigations:
+  - If the server is unreachable, the glasses say "Offline", never silence.
+  - If the server cannot read the chain for more than about 15 seconds, the glasses show "Chain check delayed - do not hand over yet".
+  - Every receipt carries a tonviewer link that anyone can check.
+  - ShopTill never holds money or keys.
+  - The code is MIT, so anyone can run their own server (see [Setup and run](#setup-and-run)).
+- **The buyer must already use crypto.** ShopTill is for sellers whose customers already pay in TON or USDT. It does not onboard new crypto users.
+- **Business path (a plan, not done).** Without custody there is no per-payment fee to skim, and a monthly fee like a soundbox does not fit a glasses app. The realistic path is a bundle with Even Realities or a TON merchant or payments partner. No such deal exists.
 
 ## Limitations
 
