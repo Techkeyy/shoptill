@@ -13,6 +13,8 @@ export interface Tg {
   photo(chat: number, png: Uint8Array, caption: string): Promise<void>;
   answerCb(id: string, text?: string): Promise<void>;
   getUpdates(offset: number, timeoutSec: number): Promise<Update[]>;
+  /** Command menu, description and about text (optional: fakes skip it). */
+  configure?(p: { commands: { command: string; description: string }[]; description: string; short: string }): Promise<void>;
 }
 
 /** Raw Bot API over fetch. The token never appears in logs (errors carry only the method name + description). */
@@ -49,6 +51,12 @@ export class BotApi implements Tg {
     f.set('caption', caption);
     f.set('photo', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'counter-qr.png');
     await this.call('sendPhoto', undefined, f);
+  }
+  async configure(p: { commands: { command: string; description: string }[]; description: string; short: string }) {
+    await this.call('setMyCommands', { commands: p.commands });
+    await this.call('setMyDescription', { description: p.description });
+    await this.call('setMyShortDescription', { short_description: p.short });
+    await this.call('setChatMenuButton', { menu_button: { type: 'commands' } });
   }
   async answerCb(id: string, text?: string) { await this.call('answerCallbackQuery', { callback_query_id: id, text }); }
   async getUpdates(offset: number, timeoutSec: number): Promise<Update[]> {

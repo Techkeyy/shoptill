@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#12261c"/>
+      <stop offset="1" stop-color="#040806"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g fill="none" stroke="#3dff8a" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <!-- lenses -->
+    <rect x="178" y="372" width="282" height="230" rx="96" stroke-width="44"/>
+    <rect x="564" y="372" width="282" height="230" rx="96" stroke-width="44"/>
+    <!-- bridge -->
+    <path d="M460 452 Q512 410 564 452" stroke-width="40"/>
+    <!-- temples -->
+    <path d="M178 430 L132 410" stroke-width="40"/>
+    <path d="M846 430 L892 410" stroke-width="40"/>
+    <!-- PAID check in the right lens -->
+    <path d="M630 492 L688 548 L786 432" stroke-width="54"/>
+    <!-- price bars in the left lens -->
+    <path d="M250 455 H388" stroke-width="34" opacity="0.55"/>
+    <path d="M250 520 H340" stroke-width="34" opacity="0.55"/>
+  </g>
+</svg>

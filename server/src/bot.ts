@@ -8,21 +8,52 @@ import type { Tg, Update, Markup } from './telegram.ts';
 const TOKEN_TTL = 20 * 60;
 /** Setup links only bind a public address to the chat that asked; a day is fine. */
 const SETUP_TTL = 24 * 60 * 60;
+const COMMANDS = [
+  { command: 'today', description: "Today's sales and total" },
+  { command: 'history', description: 'Your last 10 sales' },
+  { command: 'qr', description: 'Send your counter QR again' },
+  { command: 'wallet', description: 'Connect or change your receiving wallet' },
+  { command: 'help', description: 'How ShopTill works' },
+];
+const DESCRIPTION = [
+  'ShopTill: take crypto payments hands-free with Even G2 glasses.',
+  '',
+  'Sellers: say a price on your glasses. Customers scan your counter QR and pay in Telegram (GRAM or USDT on TON).',
+  'Your glasses show PAID only when the payment is final on chain, and warn you about fake tokens and short payments.',
+  '',
+  'Tap Start, then send the code shown on your glasses.',
+].join('\n');
+const SHORT = 'Say a price on your Even G2 glasses. Customers pay in Telegram. PAID shows only when it is real.';
 const HELP = [
-  'ShopTill commands',
+  'How ShopTill works',
+  '1. Open ShopTill on your glasses and send me the code it shows (like TILL-123456).',
+  '2. Name your shop and connect the wallet that receives payments.',
+  '3. Print the counter QR I send you.',
+  '4. Tap the glasses, say a price ("twelve dollars fifty"), tap to confirm.',
+  '5. The customer scans the QR and pays. Your glasses show PAID when it is final.',
+  '',
+  'Commands',
   '/today - sales and total for today (UTC)',
   '/history - your last 10 sales',
+  '/qr - send your counter QR again',
   '/wallet - connect or change the wallet that receives payments',
   '/help - this message',
-  '',
-  'To set up: send me the code shown on your glasses (like TILL-123456).',
 ].join('\n');
+/** Quick buttons for a seller whose shop is set up. */
+const SELLER_MENU: Markup = { inline_keyboard: [
+  [{ text: "Today's sales", callback_data: 'cmd:today' }, { text: 'History', callback_data: 'cmd:history' }],
+  [{ text: 'Counter QR', callback_data: 'cmd:qr' }, { text: 'Change wallet', callback_data: 'cmd:wallet' }],
+] };
 
 export class Bot {
   username = '';
   constructor(private svc: Till, private tg: Tg, private cfg: Config, private log: (m: string) => void = console.log) {}
 
-  async init() { this.username = (await this.tg.me()).username; }
+  async init() {
+    this.username = (await this.tg.me()).username;
+    try { await this.tg.configure?.({ commands: COMMANDS, description: DESCRIPTION, short: SHORT }); }
+    catch (e) { this.log(`bot configure error: ${(e as Error).message}`); }
+  }
 
   private nowSec() { return Math.floor(Date.now() / 1000); }
 
@@ -45,10 +76,10 @@ export class Bot {
       const payload = start[1];
       const shopM = payload ? /^shop_(\d+)$/.exec(payload) : null;
       if (shopM) return this.customerStart(chat, Number(shopM[1]));
-      await this.tg.send(chat, 'Welcome to ShopTill. Send me the code shown on your glasses (like TILL-123456).');
-      return;
+      return this.welcome(chat);
     }
     if (/^\/help(?:@\w+)?$/.test(text)) { await this.tg.send(chat, HELP); return; }
+    if (/^\/qr(?:@\w+)?$/.test(text)) return this.cmdQr(chat);
     if (/^\/today(?:@\w+)?$/.test(text)) return this.cmdToday(chat);
     if (/^\/history(?:@\w+)?$/.test(text)) return this.cmdHistory(chat);
     if (/^\/wallet(?:@\w+)?$/.test(text)) {
@@ -65,7 +96,7 @@ export class Bot {
       if (linked === 'bad') { await this.tg.send(chat, 'I do not know that code. Check the glasses and try again.'); return; }
       const linkedShop = this.svc.shop(linked.shopId);
       if (linkedShop?.stage === 'ready') {
-        await this.tg.send(chat, `Linked these glasses to "${linkedShop.name}". Same wallet, and your counter QR still works. Say a price to start.`);
+        await this.tg.send(chat, `Linked these glasses to "${linkedShop.name}". Same wallet, and your counter QR still works. Say a price to start.`, SELLER_MENU);
         return;
       }
       await this.tg.send(chat, 'Linked. What is your shop called? (This is what customers see.)');
@@ -95,7 +126,13 @@ export class Bot {
     if (!shop) return;
     const png = await QRCode.toBuffer(this.counterLink(shopId), { width: 640, margin: 2, errorCorrectionLevel: 'M' });
     await this.tg.photo(shop.seller_chat, new Uint8Array(png), 'Print this and stick it on your counter');
-    await this.tg.send(shop.seller_chat, `All set. Say a price on your glasses and customers scanning this code will be asked to pay. Commands: /today /history /help`);
+    await this.tg.send(shop.seller_chat, [
+      `All set, "${shop.name}" is open.`,
+      '',
+      'Tap your glasses and say a price, then tap again to confirm. Customers who scan this QR are asked to pay, and your glasses show PAID when it is final.',
+      '',
+      'Use the buttons below or the Menu button any time.',
+    ].join('\n'), SELLER_MENU);
   }
 
   private async customerStart(chat: number, shopId: number) {
@@ -122,7 +159,43 @@ export class Bot {
     };
   }
 
+  /** /start with no payload: a seller with a shop gets their menu; anyone else gets the setup steps. */
+  private async welcome(chat: number) {
+    const s = this.svc.sellerShop(chat);
+    if (s?.stage === 'ready') { await this.tg.send(chat, `Welcome back to "${s.name}". What do you need?`, SELLER_MENU); return; }
+    if (s?.stage === 'name') { await this.tg.send(chat, 'Welcome back. What is your shop called? (This is what customers see.)'); return; }
+    if (s?.stage === 'wallet') return this.sendWalletPrompt(chat, s.id, s.name);
+    await this.tg.send(chat, [
+      'Welcome to ShopTill 👓',
+      'Take crypto payments hands-free with your Even G2 glasses.',
+      '',
+      'To set up your shop:',
+      '1. Open ShopTill on your glasses.',
+      '2. Send me the code it shows (like TILL-123456).',
+      '',
+      'Paying at a shop? Scan the QR on their counter instead.',
+    ].join('\n'));
+  }
+
+  private async cmdQr(chat: number) {
+    const shop = this.svc.sellerShop(chat);
+    if (!shop || shop.stage !== 'ready') { await this.tg.send(chat, 'Set up your shop first: send me the code shown on your glasses.'); return; }
+    const png = await QRCode.toBuffer(this.counterLink(shop.id), { width: 640, margin: 2, errorCorrectionLevel: 'M' });
+    await this.tg.photo(chat, new Uint8Array(png), `Counter QR for "${shop.name}". Print it and stick it on your counter.`);
+  }
+
   private async onCallback(cb: NonNullable<Update['callback_query']>) {
+    const c = /^cmd:(today|history|qr|wallet)$/.exec(cb.data ?? '');
+    if (c && cb.message) {
+      const chat = cb.message.chat.id;
+      await this.tg.answerCb(cb.id);
+      if (c[1] === 'today') return this.cmdToday(chat);
+      if (c[1] === 'history') return this.cmdHistory(chat);
+      if (c[1] === 'qr') return this.cmdQr(chat);
+      const s = this.svc.sellerShop(chat);
+      if (s && s.stage !== 'name') return this.sendWalletPrompt(chat, s.id, s.name);
+      return;
+    }
     const m = /^refresh:(\d+)$/.exec(cb.data ?? '');
     if (!m || !cb.message) { await this.tg.answerCb(cb.id); return; }
     const shopId = Number(m[1]);

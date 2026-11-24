@@ -300,6 +300,25 @@ describe('payment routing and states', () => {
   });
 });
 
+describe('bot UX', () => {
+  const msg = (chat: number, text: string) => ({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, text } }) as any;
+  it('/start for a new user explains setup; for a ready seller shows the button menu', async () => {
+    const { tg, bot } = await setup();
+    await bot.handle(msg(999, '/start'));
+    expect(tg.sent.at(-1)!.text).toMatch(/send me the code/i);
+    await bot.handle(msg(555, '/start'));
+    expect(tg.sent.at(-1)!.text).toMatch(/Welcome back to "Barber Bob"/);
+    expect(JSON.stringify(tg.sent.at(-1)!.markup)).toMatch(/cmd:today/);
+  });
+  it('/qr and the Counter QR button resend the QR; Today button answers', async () => {
+    const { tg, bot } = await setup();
+    await bot.handle(msg(555, '/qr'));
+    expect(tg.photos.at(-1)!.caption).toMatch(/Counter QR for "Barber Bob"/);
+    await bot.handle({ update_id: 2, callback_query: { id: 'c1', from: { id: 555 }, data: 'cmd:today', message: { chat: { id: 555 }, message_id: 9 } } } as any);
+    expect(tg.sent.at(-1)!.text).toMatch(/No paid sales yet today|Today:/);
+  });
+});
+
 describe('seller DM', () => {
   it('DMs the seller when the glasses are not polling', async () => {
     const e = await setup();
