@@ -95,7 +95,7 @@ Offline path, no payment needed: arm a sale and show a screenshot of anything. T
 Prerequisites: a Telegram bot token from @BotFather, a Groq API key, and optionally a TON Center API key (raises the rate limit).
 
 ```bash
-npm run build -w shoptill-pay          # Mini App; also needed before the server tests on a fresh clone
+npm run build -w shoptill-pay          # Mini App
 npm run build -w @shoptill/server
 cp server/.env.example server/.env     # fill in, then export or load it
 node server/dist/server.mjs
@@ -124,10 +124,9 @@ Environment variables (names only, see `server/.env.example` and `server/src/con
 
 ### Tests
 
-Counted on 2026-11-24: server 106, glasses 51, core 29, **186 in total**.
+Counted on 2026-11-24 on a fresh clone (no build step needed): server 106, glasses 51, core 29, **186 in total**, all passing.
 
 ```bash
-npm run build -w shoptill-pay       # first, on a fresh clone: server/src/static.test.ts needs apps/pay/dist
 npm test -w @shoptill/server        # 106 tests
 npm test -w shoptill-glasses        # 51 tests
 npm test -w @shoptill/core          # 29 tests (24 match, 5 toncenter)
