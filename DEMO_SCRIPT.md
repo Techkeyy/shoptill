@@ -29,7 +29,7 @@ Everything on screen is the real product against the live server on TON testnet.
 1. `curl -s https://shoptill.103-195-188-198.sslip.io/healthz` returns OK.
 2. The glasses simulator shows "Say a price", not "Offline - retrying". If it shows a pairing code, the DB was reset: re-pair first.
 3. Customer wallet balance check: the pay page does a pre-flight and refuses if there is not enough USDT or GRAM for gas (a failed send would waste a take).
-4. Rehearse once and note the real time from "Pay" to PAID. Measured server-side from block time to PAID: about 2 s on testnet (UAT 2) and 5.5 s on the mainnet pilot without a TON Center API key. The P0 spike saw 1.3 to 3.6 s from send acceptance. The live-states harness took 12 to 25 s, which includes a wait of about 10 s for the sequence number and throttling, so it is not user-perceived latency. Do not narrate a number you did not see in this take. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
+4. Rehearse once and note the real time from "Pay" to PAID. Measured server-side from block time to PAID: 2 to 5.5 s across 4 logged payments (`evidence/server-log.txt`), no TON Center API key. The P0 spike saw 1.3 to 3.6 s from send acceptance. The live-states harness took 12 to 25 s, which includes a wait of about 10 s for the sequence number and throttling, so it is not user-perceived latency. Do not narrate a number you did not see in this take. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
 5. Voice: tried through the simulator mic in UAT 2 ("Twelve dollars fifty." heard as 12.50 USDT) and in the mainnet pilot ("zero point one gram." heard as 0.10 GRAM). Early tries misheard (250, 50, "0.1" without gram) and the confirm screen caught them. Say a word between numbers ("twelve dollars fifty"). Try the mic once before recording. If it fails, use swipe presets (Scene 3 gives both).
 
 ## Scenes
@@ -129,7 +129,7 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 - Do not say the 2,815-payment replay shows detection. It shows nothing was falsely counted; no real payment was matched to a sale.
 - Do not say it works on physical G2 hardware. It ran in the simulator.
 - Do not say the glasses alert the seller when the app is closed. They can't (Even Hub limit). The bot DM goes to the phone instead.
-- Do not give a latency number unless you saw it in this take. Say "when the chain confirms". (Measured: about 2 s on testnet, 5.5 s on the mainnet pilot.)
+- Do not give a latency number unless you saw it in this take. Say "when the chain confirms". (Measured: 2 to 5.5 s, `evidence/server-log.txt`.)
 - Do not say Gram Wallet paid in the demo. Gram Wallet is mainnet only; the testnet customer is Tonkeeper testnet, connected with TON Connect.
 - Do not say it integrates TON Pay or has paying customers. Pricing and TVM fit are plans.
 - Do not present the fallback harness clip as a live attack.

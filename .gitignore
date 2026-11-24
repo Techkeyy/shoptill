@@ -5,3 +5,6 @@ dist
 .secrets/
 evidence/*.db
 evidence/*.db-*
+
+# internal build log (kept locally, not published)
+docs/build-log.md

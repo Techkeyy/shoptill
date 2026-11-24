@@ -1,0 +1,34 @@
+# Raw server log lines (journalctl -u shoptill, filtered to payment detection, speech and restarts)
+# 'chain->seen' / 'chain->paid' = seconds from the transaction's block time to the server seeing it / marking the sale PAID.
+# Speech lines record the price words only; no audio is kept. Hostnames and PIDs are unchanged; nothing secret is logged.
+2026-11-23T17:30:46+00:00 host node[3251949]: shoptill listening on :8799 (testnet)
+2026-11-23T18:13:05+00:00 host node[3262102]: shoptill listening on :8799 (testnet)
+2026-11-23T18:56:41+00:00 host node[3272633]: shoptill listening on :8799 (testnet)
+2026-11-23T19:22:31+00:00 host node[3279354]: shoptill listening on :8799 (testnet)
+2026-11-23T19:36:28+00:00 host node[3283371]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-23T20:00:57+00:00 host node[3290066]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-23T21:21:17+00:00 host node[3310037]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-23T21:28:40+00:00 host node[3310037]: paid sale=df431vsn chain->seen=2s chain->paid=2s
+2026-11-23T21:33:23+00:00 host node[3313224]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-23T21:37:55+00:00 host node[3313224]: stt heard "Twelve dollars fifty." -> 12.50 USDT
+2026-11-23T21:45:16+00:00 host node[3316351]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T04:54:01+00:00 host node[3418890]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T04:54:28+00:00 host node[3419084]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T04:57:57+00:00 host node[3420215]: shoptill listening on 127.0.0.1:8799 (mainnet)
+2026-11-24T05:06:35+00:00 host node[3420215]: stt heard "0.1" -> 0.10 USDT
+2026-11-24T05:06:43+00:00 host node[3420215]: stt heard "." -> none USDT
+2026-11-24T05:06:56+00:00 host node[3420215]: stt heard "The The" -> none USDT
+2026-11-24T05:07:09+00:00 host node[3420215]: stt heard "What is that?" -> none USDT
+2026-11-24T05:07:23+00:00 host node[3420215]: stt heard "0.1" -> 0.10 USDT
+2026-11-24T05:10:37+00:00 host node[3423577]: shoptill listening on 127.0.0.1:8799 (mainnet)
+2026-11-24T05:11:28+00:00 host node[3423577]: stt heard "zero point one gram." -> 0.10 GRAM
+2026-11-24T05:12:07+00:00 host node[3423577]: paid sale=deobd433 chain->seen=5.5s chain->paid=5.5s
+2026-11-24T05:14:04+00:00 host node[3424858]: shoptill listening on 127.0.0.1:8799 (mainnet)
+2026-11-24T05:14:41+00:00 host node[3425245]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T05:27:29+00:00 host node[3428689]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T05:32:16+00:00 host node[3430108]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T05:39:15+00:00 host node[3432087]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T05:53:37+00:00 host node[3436788]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T06:04:08+00:00 host node[3436788]: paid sale=fu6awr09 chain->seen=4.1s chain->paid=4.1s
+2026-11-24T06:11:10+00:00 host node[3441360]: shoptill listening on 127.0.0.1:8799 (testnet)
+2026-11-24T06:12:51+00:00 host node[3441360]: paid sale=3sxlawar chain->seen=3.6s chain->paid=3.6s

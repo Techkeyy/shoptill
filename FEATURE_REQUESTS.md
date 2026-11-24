@@ -10,7 +10,7 @@ Five things the platforms were missing while building ShopTill (Even G2 + Even H
 ## 2. Even Hub: on-device speech-to-text, or an official STT path
 
 **Request:** a built-in STT call on the bridge, or a documented, keyless STT service for apps.
-**Why it mattered for ShopTill:** the asr template keeps the STT key in the frontend bundle. For a payments app that is not acceptable, so we record PCM on the glasses and post a WAV to our own server, which calls Groq Whisper. That adds a server hop, a third-party dependency and a quota to protect (we rate limit 12 requests per minute per device). Voice is how the seller arms a sale hands-free, so it matters.
+**Why it mattered for ShopTill:** the asr template keeps the STT key in the frontend bundle. For a payments app that is not acceptable, so we record PCM on the glasses and post a WAV to our own server, which calls Groq Whisper. That adds a server hop, a third-party dependency and a quota to protect (we rate limit 12 requests per minute per device and 30 per minute per IP). Voice is how the seller arms a sale hands-free, so it matters.
 
 ## 3. Even Hub: a published glyph and font reference for the 576x288 display
 

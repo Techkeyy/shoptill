@@ -4,13 +4,25 @@
 
 **A silent till for Even G2 glasses: say the price, the customer pays in Telegram, and the glasses show PAID only when the TON chain finalizes it. Screenshots don't count.**
 
-**[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Pay page](https://shoptill.103-195-188-198.sslip.io)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Demo script](DEMO_SCRIPT.md) · [Feature requests](FEATURE_REQUESTS.md) · [Build log](docs/build-log.md)
+**[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Pay page](https://shoptill.103-195-188-198.sslip.io)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Demo script](DEMO_SCRIPT.md) · [Feature requests](FEATURE_REQUESTS.md)
 
 ShopTill is for crypto-native sellers who take payments face to face, where the buyer already has a TON wallet. The lead case is the in-person P2P USDT trader: someone who swaps cash for USDT with a stranger and today checks tonviewer by hand. The glasses show PAID only after the chain finalizes the payment, and they flag look-alike (fake) tokens that a hand check or a naive watcher can miss. The seller keeps their eyes on the person and the goods, not on a phone. ShopTill never holds money or keys.
 
 > *"They say they paid. Is it real, or is that a screenshot?"*
 
-Heads Up: Even Realities hackathon (DoraHacks). Tracks: **Crypto & DeFi** (TON chain, TON Connect), **Messaging** (Telegram bot and Mini App) and **Best Telegram integration**. The demo runs on **TON testnet**. The same build also took **one real mainnet payment** (0.10 GRAM, [evidence](evidence/mainnet-pilot.md)).
+Heads Up: Even Realities hackathon (DoraHacks). Tracks: **Crypto & DeFi** (TON chain, TON Connect), **Messaging** (Telegram bot and Mini App) and **Best Telegram integration**. The demo runs on **TON testnet**. The same build also took **one real mainnet payment** (0.10 GRAM, [evidence](evidence/mainnet-pilot.md)); it went between the owner's own wallets, and a setup bug it exposed (the receiving wallet had to be a testnet account) is fixed.
+
+**What is real and what is not, at a glance**
+
+| | Status |
+|---|---|
+| TON chain reads, payment classification, fake-token detection | Real, on testnet (live harness 8/8, P0 11/11) |
+| Real-money payment | One, 0.10 GRAM on mainnet. Mainnet USDT not yet paid |
+| Telegram bot, Mini App, TON Connect, receipts | Real and live ([@ShopTillBot](https://t.me/ShopTillBot)) |
+| Voice price | Real PC microphone through the simulator (Groq Whisper) |
+| Glasses | Even Hub **simulator** only. Not yet run on physical G2 hardware |
+| Detection time, block to PAID | 2 to 5.5 s across 4 logged payments ([raw log](evidence/server-log.txt)) |
+| Customer wallet | Tonkeeper (testnet and mainnet). Wallet in Telegram not yet tested |
 
 ## What it looks like
 
@@ -20,7 +32,7 @@ Real 576x288 glasses captures from the Even Hub simulator against the live testn
 |:--:|:--:|:--:|
 | <img src="evidence/screens/pair.png" width="260"><br>Pairing code to send to the bot | <img src="evidence/screens/idle.png" width="260"><br>"Say a price" | <img src="evidence/screens/preset.png" width="260"><br>Preset picker (swipe, no voice needed) |
 | <img src="evidence/screens/ready.png" width="260"><br>READY 12.00 USDT, waiting | <img src="evidence/screens/fake.png" width="260"><br>FAKE: a real look-alike jetton sent on testnet, NOT PAID, still waiting | <img src="evidence/screens/paid.png" width="260"><br>PAID: the honest payment that followed on the same sale, no taps ([tx](https://testnet.tonviewer.com/transaction/a58b9325f62d44dcabba9371ff43065204942a496dfdcfd6a5e8061992bde0ea)) |
-| <img src="evidence/screens/short.png" width="260"><br>SHORT (earlier capture) | <img src="evidence/screens/confirming.png" width="260"><br>Payment seen, confirming (earlier capture) | <img src="evidence/screens/uat2-paid.png" width="260"><br>PAID 12.50 USDT from the owner's real voice run (UAT 2) |
+| <img src="evidence/screens/short.png" width="260"><br>SHORT 5.00 of 10.00, waiting for the rest (live testnet) | <img src="evidence/screens/confirming.png" width="260"><br>Payment seen, confirming (earlier capture) | <img src="evidence/screens/uat2-paid.png" width="260"><br>PAID 12.50 USDT from the owner's real voice run (UAT 2) |
 | <img src="evidence/screens/mainnet-paid.png" width="260"><br>PAID 0.10 GRAM on mainnet (pilot) | <img src="evidence/screens/tg-help-and-menu.png" width="260"><br>The bot's /help and the seller button menu (Telegram Desktop) | <img src="evidence/screens/tg-receipt.png" width="260"><br>Receipt in Telegram with the mainnet tonviewer card |
 
 ## Why this exists
@@ -191,7 +203,7 @@ Most "did they pay" tools watch for an incoming amount. On TON, anyone can send 
 
 | Evidence | What it shows | Result |
 |---|---|---|
-| [Mainnet pilot](evidence/mainnet-pilot.md) | One real 0.10 GRAM payment: voice price, paid from a Tonkeeper mainnet wallet, PAID 5.5 s after the block, receipt sent. [tonviewer](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332) | One real payment, end to end |
+| [Mainnet pilot](evidence/mainnet-pilot.md) | One real 0.10 GRAM payment: voice price, paid from a Tonkeeper mainnet wallet, PAID 5.5 s after the block ([raw log](evidence/server-log.txt)), receipt sent. [tonviewer](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332) | One real payment, end to end |
 | [UAT 2](evidence/uat-2-repair-voice-pay.md) | Re-pair, spoken "Twelve dollars fifty." heard as 12.50 USDT, paid, PAID about 2 s after the block, receipt | PASS |
 | [UAT 1](evidence/uat-1-first-payment.md) | Owner paid 12 test USDT from Tonkeeper testnet through the Mini App; PAID and a Telegram receipt. [tx](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc) | PASS |
 | [Live edge states](evidence/live-states.md) | The real server service against real testnet, 8 cases, each with a transaction link | **8/8** |
@@ -199,7 +211,7 @@ Most "did they pay" tools watch for an incoming amount. On TON, anyone can send 
 | [Real-input replay](evidence/real-input.md) | 2,815 real mainnet payments, read-only | Nothing falsely counted |
 | [Security audit](evidence/security-audit.md) | Three high findings found, fixed and covered by tests; limitations disclosed | See Limits |
 
-Latency, measured server-side from block time to PAID: about 2 s on testnet (UAT 2) and 5.5 s on the mainnet pilot, which ran without a TON Center API key. The live-states harness took 12 to 25 s, but that includes a wait of about 10 s for the wallet sequence number plus request throttling, so it is not user-perceived latency.
+Latency, measured server-side from block time to PAID: 2 s (UAT 2), 3.6 s and 4.1 s (testnet screenshot runs) and 5.5 s (mainnet pilot), all without a TON Center API key. The raw log lines are in [evidence/server-log.txt](evidence/server-log.txt). The live-states harness took 12 to 25 s, but that includes a wait of about 10 s for the wallet sequence number plus request throttling, so it is not user-perceived latency.
 
 **Live edge states (8/8):**
 
@@ -273,7 +285,7 @@ Latency, measured server-side from block time to PAID: about 2 s on testnet (UAT
 - **Runs on one VPS as root.** The service has `NoNewPrivileges` and `PrivateTmp`; a dedicated user is left for later.
 - **Pairing.** It is trust on first use, and the global pairing lockout can be tripped by an attacker to block new pairings (denial of service).
 - **One receiving address per shop.** Two shops sharing one receiving address would conflict.
-- **TON Center without an API key.** It is rate limited, which is why mainnet detection took 5.5 s instead of about 2 s. I have not measured with a key.
+- **TON Center without an API key.** It is rate limited, which likely adds to the 2 to 5.5 s detection time. I have not measured with a key.
 - **Mainnet is thin.** One payment (GRAM, from Tonkeeper). Mainnet USDT and Gram Wallet are untested.
 - **Voice.** Tried through the simulator microphone in UAT 2 ("Twelve dollars fifty." gave 12.50 USDT) and the mainnet pilot ("zero point one gram." gave 0.10 GRAM). Misheard first tries happened (250, 50, and "0.1" without "gram"); the confirm screen caught them, and a word between the numbers ("dollars") makes recognition much more reliable.
 - **Untested live:** `/history` and the seller DM with the glasses closed. `/today` counts are unit-tested.
