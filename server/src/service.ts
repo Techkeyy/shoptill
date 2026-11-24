@@ -365,7 +365,7 @@ export class Till {
     const { shop } = this.deviceShop(deviceId);
     const d = new Date(this.nowMs());
     const start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000;
-    const rows = all(this.d.db, "SELECT * FROM sales WHERE shop_id=? AND state IN ('PAID','EXTRA') AND paid_at>=?", shop.id, start);
+    const rows = all(this.d.db, "SELECT * FROM sales WHERE shop_id=? AND state IN ('PAID','EXTRA','DUPLICATE') AND paid_at>=?", shop.id, start);
     const asset: string = rows.length ? rows[rows.length - 1].asset : this.d.cfg.usdt ? 'USDT' : 'GRAM';
     const mine = rows.filter((r) => r.asset === asset);
     const total = mine.reduce((a, r) => a + BigInt(r.paid_raw), 0n);
@@ -411,6 +411,9 @@ export class Till {
       amount: formatMoney(BigInt(s.amount_raw), s.decimals), amountRaw: s.amount_raw as string, decimals: s.decimals as number,
       received: formatMoney(BigInt(s.paid_raw), s.decimals),
       missing: s.state === 'SHORT' ? formatMoney(BigInt(s.missing_raw), s.decimals) : undefined,
+      // what the customer should send now: the rest on a SHORT sale, else the full price
+      dueRaw: (s.state === 'SHORT' ? s.missing_raw : s.amount_raw) as string,
+      due: formatMoney(BigInt(s.state === 'SHORT' ? s.missing_raw : s.amount_raw), s.decimals),
       sellerAddress: this.friendlyAddress(shop.address), sellerRaw: shop.address as string,
       jettonMaster: s.asset === 'USDT' ? this.d.cfg.usdt?.master : undefined,
       network: this.d.cfg.network, expiresAt: s.expires_at as number,

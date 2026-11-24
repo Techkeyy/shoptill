@@ -23,4 +23,6 @@ which is the exact case the "money stayed" rule handles (see `packages/core/src/
 Earlier in the same session, Whisper heard "0.1" without the word "gram" and offered 0.10 USDT. The confirm step caught it before anything was charged.
 "gram" was then added to the speech prompt.
 
+**Why the payment went to the owner's test wallet.** In setup mode the Mini App only accepted a wallet on testnet, even while the server ran on mainnet. So the owner had to connect a testnet account, and its address is the same on mainnet; the 0.1 GRAM landed at that mainnet twin. Found by the audit on 2026-11-24 and fixed: setup now asks the server which network it runs on (`GET /api/network`) and requires the wallet to match, and the pay page blocks a wallet on the wrong network in both directions.
+
 Found and fixed during the pilot: the glasses showed the sender in testnet address form (`0Q…`). They now use the network's own form (`UQ…`).

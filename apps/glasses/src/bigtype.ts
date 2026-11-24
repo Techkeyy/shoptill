@@ -61,7 +61,7 @@ export function bigLayout(view: View): BigLayout | null {
     case 'DUPLICATE':
       return { glyph: 'warn', word: 'DOUBLE', amount: money(s), sub: asset(s), detail: 'second payment on a paid sale', hint: 'tap: ok' }
     case 'FAKE':
-      return { glyph: 'warn', word: 'FAKE', amount: money(s), sub: 'NOT PAID', detail: 'wrong token - do NOT hand over goods', hint: 'tap: ok' }
+      return { glyph: 'warn', word: 'FAKE', amount: money(s), sub: 'NOT PAID', detail: 'wrong token - do NOT hand over goods', hint: 'still waiting for real payment | 2x tap: cancel' }
     case 'UNMATCHED': {
       const u = st.unmatched
       const age = ageText(u?.ageSec)

@@ -218,7 +218,7 @@ export class Bot {
     if (!shop || shop.stage !== 'ready') { await this.tg.send(chat, 'Set up your shop first: send me the code shown on your glasses.'); return; }
     const d = new Date();
     const start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000;
-    const rows = this.svc.history(shop.id, 1000).filter((s) => (s.state === 'PAID' || s.state === 'EXTRA') && s.paid_at >= start);
+    const rows = this.svc.history(shop.id, 1000).filter((s) => (s.state === 'PAID' || s.state === 'EXTRA' || s.state === 'DUPLICATE') && s.paid_at >= start);
     const byAsset = new Map<string, bigint>();
     for (const s of rows) byAsset.set(s.asset, (byAsset.get(s.asset) ?? 0n) + BigInt(s.paid_raw));
     const parts = [...byAsset].map(([a, v]) => `${formatMoney(v, this.svc.decimalsOf(a))} ${a}`);

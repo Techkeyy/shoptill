@@ -1,3 +1,5 @@
+> **What this file is.** The director's working log from the build (Nov 23 to 29, 2026), kept as-is to show how ShopTill was planned, tested and corrected. Older entries reflect what was true on their date and some numbers have since changed. The README and `evidence/` are the current source of truth.
+
 # director.md: ShopTill
 
 Handover file. Any director can take over from here. Keep it current after every phase.

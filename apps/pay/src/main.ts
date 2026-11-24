@@ -9,7 +9,7 @@ declare global {
 
 interface Info {
   shop: string; state: string; asset: 'USDT' | 'GRAM'; amount: string; amountRaw: string; decimals: number;
-  received: string; missing?: string; sellerAddress: string; sellerRaw: string; jettonMaster?: string;
+  received: string; missing?: string; dueRaw?: string; due?: string; sellerAddress: string; sellerRaw: string; jettonMaster?: string;
   network: 'testnet' | 'mainnet'; expiresAt: number;
 }
 
@@ -60,7 +60,11 @@ async function setup() {
     document.getElementById('go')!.onclick = async () => {
       const cur = connected();
       if (!cur) { tc.openModal(); return; }
-      if (cur.account.chain !== CHAIN.TESTNET) { draw('Please switch your wallet to testnet, then reconnect.'); return; }
+      // The receiving wallet must be on the same network as the server (a testnet account here once
+      // received a mainnet payment at its mainnet twin address during the pilot).
+      let net = 'testnet';
+      try { net = (await api('/api/network')).network; } catch { /* default testnet */ }
+      if (cur.account.chain !== (net === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)) { draw(`Please switch your wallet to ${net}, then reconnect.`); return; }
       try {
         await api('/api/shop/address', { method: 'POST', body: JSON.stringify({ t: token, address: cur.account.address }) });
         // never let the seller's session leak into the customer pay flow on this device
@@ -124,11 +128,11 @@ async function preflight(info: Info, w: Wallet) {
   if (info.asset === 'USDT') {
     const jw = await api(`/api/pay/jetton-wallet?${q}`);
     const bal = BigInt(jw.balance ?? '0');
-    const need = BigInt(info.amountRaw);
+    const need = BigInt(info.dueRaw ?? info.amountRaw);
     if (!jw.exists || bal < need) throw new Error(`Your wallet doesn't have enough USDT (has ${fmt(jw.exists ? bal : 0n, info.decimals)}, needs ${fmt(need, info.decimals)}).`);
     if (gram < GRAM_FEE_USDT) throw new Error('Your wallet needs a little GRAM for the network fee.');
   } else {
-    const need = BigInt(info.amountRaw);
+    const need = BigInt(info.dueRaw ?? info.amountRaw);
     if (gram < need + GRAM_FEE_NATIVE) throw new Error(`Your wallet doesn't have enough GRAM (has ${fmt(gram, 9)}, needs ${fmt(need + GRAM_FEE_NATIVE, 9)} including the network fee).`);
   }
 }
@@ -142,7 +146,7 @@ async function sendPayment(info: Info, w: Wallet) {
       validUntil, network,
       // Non-bounceable: a fresh seller wallet (never used) would bounce a bounceable payment
       // back to the customer (seen on testnet, evidence/p0-spike.md).
-      messages: [{ address: Address.parse(info.sellerRaw).toString({ bounceable: false, testOnly: info.network === 'testnet' }), amount: info.amountRaw, payload: b64(comment(payload)) }],
+      messages: [{ address: Address.parse(info.sellerRaw).toString({ bounceable: false, testOnly: info.network === 'testnet' }), amount: info.dueRaw ?? info.amountRaw, payload: b64(comment(payload)) }],
     });
     return;
   }
@@ -152,7 +156,7 @@ async function sendPayment(info: Info, w: Wallet) {
   const body = beginCell()
     .storeUint(0x0f8a7ea5, 32)
     .storeUint(BigInt(Date.now()), 64)
-    .storeCoins(BigInt(info.amountRaw))
+    .storeCoins(BigInt(info.dueRaw ?? info.amountRaw))
     .storeAddress(Address.parse(info.sellerRaw))
     .storeAddress(customer)
     .storeBit(0)
@@ -188,8 +192,8 @@ async function pay() {
   const draw = (err = '') => {
     const w = connected();
     let blockErr = '';
-    if (w && info.network === 'testnet' && w.account.chain !== CHAIN.TESTNET) {
-      blockErr = 'Switch your wallet to testnet, then reconnect.';
+    if (w && w.account.chain !== (info.network === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)) {
+      blockErr = info.network === 'testnet' ? 'Switch your wallet to testnet, then reconnect.' : 'Switch your wallet to mainnet, then reconnect.';
     } else if (w && isSeller(w)) {
       blockErr = "This is the shop's own wallet. Switch to the wallet you want to pay from.";
     }

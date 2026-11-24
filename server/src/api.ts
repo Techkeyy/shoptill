@@ -35,6 +35,7 @@ export function createApi(d: ApiDeps) {
   const doFetch = d.fetchImpl ?? fetch;
   const pairLimit = new RateLimiter(120, 60_000);
   const sttLimit = new RateLimiter(12, 60_000);
+  const sttIpLimit = new RateLimiter(30, 60_000); // many devices from one IP must not drain the STT quota
   /** Every device call must present the device secret issued at first pair. */
   const dev = (r: Req, id: string): string => { svc.authDevice(id, r.headers['x-device-secret']); return id; };
 
@@ -60,7 +61,7 @@ export function createApi(d: ApiDeps) {
 
   async function stt(r: Req): Promise<Res> {
     const did = dev(r, str(r.query.get('deviceId'), 'deviceId'));
-    if (!sttLimit.hit(did, Date.now())) throw new HttpError(429, 'too many requests');
+    if (!sttLimit.hit(did, Date.now()) || !sttIpLimit.hit(r.ip ?? '?', Date.now())) throw new HttpError(429, 'too many requests');
     if (!cfg.groqKey) throw new HttpError(501, 'stt not configured');
     if (!r.body.length || r.body.length > 3_000_000) throw new HttpError(400, 'bad audio');
     const form = new FormData();
@@ -72,8 +73,8 @@ export function createApi(d: ApiDeps) {
     form.set('prompt', 'Shop prices: twelve fifty is 12.50, seven twenty-five is 7.25, five is 5, twenty dollars is $20, three gram is 3 gram, zero point one gram is 0.1 gram, half a gram is 0.5 gram.');
     form.set('response_format', 'json');
     const res = await doFetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST', headers: { authorization: `Bearer ${cfg.groqKey}` }, body: form,
-    });
+      method: 'POST', headers: { authorization: `Bearer ${cfg.groqKey}` }, body: form, signal: AbortSignal.timeout(20_000),
+    }).catch(() => { throw new HttpError(504, 'stt timeout'); });
     if (!res.ok) throw new HttpError(502, `stt upstream ${res.status}`);
     const j: any = await res.json();
     const text = String(j.text ?? '').trim();
@@ -106,6 +107,7 @@ export function createApi(d: ApiDeps) {
       const k = `${r.method} ${r.path}`;
       switch (k) {
         case 'GET /healthz': return json(200, { ok: true });
+        case 'GET /api/network': return json(200, { network: cfg.network });
         case 'GET /tonconnect-manifest.json':
           return json(200, { url: cfg.publicUrl, name: 'ShopTill', iconUrl: `${cfg.publicUrl}/icon.png` });
         case 'POST /api/device/pair': {

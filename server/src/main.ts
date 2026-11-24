@@ -26,8 +26,9 @@ const tc = new TonCenter({
   jettonDecimals: cfg.jettonDecimals,
 });
 const chain: Chain = {
-  getIncomingTransactions: (a, s) => tc.getIncomingTransactions(a, s),
-  getJettonTransfersTo: (a, s) => tc.getJettonTransfersTo(a, s),
+  // forward opts: the watcher asks for includePending (CONFIRMING); dropping it silently disabled that state
+  getIncomingTransactions: (a, s, o) => tc.getIncomingTransactions(a, s, o),
+  getJettonTransfersTo: (a, s, o) => tc.getJettonTransfersTo(a, s, o),
   // shares the client's throttle (note: `get` is private in core)
   raw: (path, params) => tc.get(path, params),
 };

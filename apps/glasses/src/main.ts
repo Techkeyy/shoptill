@@ -18,7 +18,9 @@ import { encodeWav } from './wav'
 const ASSET = 'USDT' as const
 const LISTEN_MS = 6000
 const POLL_MS = 2000
-const OPEN_STATES = ['WAITING', 'SHORT', 'CONFIRMING']
+// Keep polling while the sale can still change. FAKE and UNMATCHED stay open: the honest payment
+// often arrives right after a fake token or a stray transfer, and the seller must see PAID.
+const OPEN_STATES = ['WAITING', 'SHORT', 'CONFIRMING', 'FAKE', 'UNMATCHED']
 const VOIDABLE = ['WAITING', 'SHORT', 'FAKE', 'UNMATCHED']
 
 const bridge = await waitForEvenAppBridge()
@@ -204,7 +206,7 @@ async function poll() {
     if (st.sale) saleId = st.sale.saleId
     if (st.unmatched) { if (paymentId !== st.unmatched.paymentId) attachConfirmed = false; paymentId = st.unmatched.paymentId }
     if (st.state === 'IDLE' || st.state === 'VOID') return goIdle()
-    void show({ v: 'sale', status: st })
+    void show({ v: 'sale', status: st, confirmAttach: st.state === 'UNMATCHED' && attachConfirmed })
     // Polling continues only while the sale is open and unresolved.
     if (OPEN_STATES.includes(st.state)) schedulePoll()
   } catch (e) {
@@ -283,7 +285,7 @@ async function onTap() {
         try { await api.attach(deviceId, saleId, paymentId) } catch { /* poll will show truth */ }
         mode = 'sale'; return void poll()
       }
-      if (st === 'FAKE') { void show({ v: 'sale', status: { state: 'WAITING', sale: last?.sale } }); return schedulePoll() }
+      if (st === 'FAKE') return // stays on FAKE until a real payment arrives (polling continues); 2x tap cancels
       if (st === 'DUPLICATE' || st === 'LATE') return goIdle()
       return
     }

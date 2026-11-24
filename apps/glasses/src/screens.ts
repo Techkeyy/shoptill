@@ -97,7 +97,7 @@ export function renderSale(st: Status, confirmAttach = false): Screen {
     case 'DUPLICATE':
       return { l1: `DUPLICATE  ${amt}`, l2: 'second payment on a paid sale', l3: 'tap: ok' }
     case 'FAKE':
-      return { l1: `${G.warn} FAKE TOKEN - NOT PAID`, l2: `${amt} wrong token`, l3: 'tap: ok  ' + G.sep + '  do NOT hand over goods' }
+      return { l1: `${G.warn} FAKE TOKEN - NOT PAID`, l2: `${amt} wrong token ${G.sep} still waiting`, l3: 'do NOT hand over goods  ' + G.sep + '  2x tap: cancel' }
     case 'UNMATCHED': {
       const u = st.unmatched
       const age = ageText(u?.ageSec)
