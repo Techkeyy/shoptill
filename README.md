@@ -294,7 +294,7 @@ Latency, measured server-side from block time to PAID: 2 s (UAT 2), 3.6 s and 4.
 
 ## What existed before Nov 23
 
-Nothing. The repo was created on 2026-11-23, the first day of the build window. The glasses app started from the official [even-realities/evenhub-templates `asr` template](https://github.com/even-realities/evenhub-templates/tree/main/asr). `apps/glasses/ORIGIN.md` lists what was kept (Vite and TypeScript setup, the container and event-handling pattern); everything else was written for ShopTill. The [build log](docs/build-log.md) is the working log of how it was planned, tested and corrected; older entries reflect what was true on their date.
+Nothing. The repo was created on 2026-11-23, the first day of the build window. The glasses app started from the official [even-realities/evenhub-templates `asr` template](https://github.com/even-realities/evenhub-templates/tree/main/asr). `apps/glasses/ORIGIN.md` lists what was kept (Vite and TypeScript setup, the container and event-handling pattern); everything else was written for ShopTill.
 
 Open-source libraries and services used: Even Hub SDK `@evenrealities/even_hub_sdk` 0.0.16, `@evenrealities/evenhub-cli`, `@evenrealities/evenhub-simulator`, Vite, TypeScript, Vitest, `@ton/core`, `@ton/ton`, `@ton/crypto`, `@ton-community/assets-sdk` (test jetton minting), `@tonconnect/ui`, `buffer`, `qrcode`, esbuild. External services: TON Center v3, Telegram Bot API, Groq Whisper API.
 
