@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- C: "Coin slot" — the glasses ARE the till: a coin drops into the bridge. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2aabee"/>
+      <stop offset="1" stop-color="#1468c8"/>
+    </linearGradient>
+    <radialGradient id="coin" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="0.45" stop-color="#ffcf3a"/>
+      <stop offset="1" stop-color="#e08a00"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#06306b" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- motion lines -->
+  <g stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.55">
+    <path d="M430 150 V230"/><path d="M594 130 V250"/><path d="M512 90 V170"/>
+  </g>
+  <!-- coin, tilted, half into the slot -->
+  <g filter="url(#shadow)">
+    <ellipse cx="512" cy="380" rx="118" ry="128" fill="url(#coin)" stroke="#b86e00" stroke-width="10"/>
+    <ellipse cx="512" cy="380" rx="88" ry="96" fill="none" stroke="#b86e00" stroke-width="6" opacity="0.6"/>
+    <g fill="none" stroke="#9a5a00" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M462 342 H562 L512 444 Z"/><path d="M512 342 V444"/>
+    </g>
+  </g>
+  <!-- glasses (front, coin slot in the bridge hides the coin's bottom) -->
+  <g filter="url(#shadow)">
+    <rect x="118" y="470" width="340" height="230" rx="100" fill="#0d1526" stroke="#ffffff" stroke-width="36"/>
+    <rect x="566" y="470" width="340" height="230" rx="100" fill="#0d1526" stroke="#ffffff" stroke-width="36"/>
+    <!-- wide bridge block that holds the slot -->
+    <rect x="400" y="470" width="224" height="80" rx="40" fill="#ffffff"/>
+    <rect x="432" y="496" width="160" height="26" rx="13" fill="#0d1526"/>
+    <path d="M118 530 L64 506" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+    <path d="M906 530 L960 506" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+  </g>
+  <!-- coin bottom is hidden: redraw top half only over the bridge -->
+  <clipPath id="above"><rect x="0" y="0" width="1024" height="509"/></clipPath>
+  <g clip-path="url(#above)">
+    <ellipse cx="512" cy="380" rx="118" ry="128" fill="url(#coin)" stroke="#b86e00" stroke-width="10"/>
+    <ellipse cx="512" cy="380" rx="88" ry="96" fill="none" stroke="#b86e00" stroke-width="6" opacity="0.6"/>
+    <g fill="none" stroke="#9a5a00" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M462 342 H562 L512 444 Z"/><path d="M512 342 V444"/>
+    </g>
+  </g>
+  <rect x="432" y="496" width="160" height="13" fill="#0d1526"/>
+  <!-- HUD -->
+  <g filter="url(#glow)" fill="none" stroke="#3dff8a" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M196 568 H330" stroke-width="22"/><path d="M196 620 H290" stroke-width="22" opacity="0.6"/>
+    <path d="M660 590 L714 640 L806 540" stroke-width="34"/>
+  </g>
+</svg>

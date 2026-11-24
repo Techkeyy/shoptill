@@ -1,3 +1,5 @@
+<img src="brand/logo-512.png" alt="ShopTill logo" width="120" align="right">
+
 # ShopTill
 
 **Say the price, your customer pays in Telegram, and your glasses show PAID only when the TON chain confirms it. Screenshots don't count.**

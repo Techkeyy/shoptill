@@ -1,28 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- B: "Shades" — cool sunglasses; the lenses reflect the deal: a TON diamond and PAID. -->
   <defs>
-    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
-      <stop offset="0" stop-color="#12261c"/>
-      <stop offset="1" stop-color="#040806"/>
-    </radialGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="14" result="b"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b8ff3d"/>
+      <stop offset="0.5" stop-color="#3dff8a"/>
+      <stop offset="1" stop-color="#00c7b7"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2433"/>
+      <stop offset="1" stop-color="#05070c"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="26" stdDeviation="22" flood-color="#00382e" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="L"><path d="M140 380 H468 V520 Q468 650 330 650 H278 Q140 650 140 520 Z"/></clipPath>
+    <clipPath id="R"><path d="M556 380 H884 V520 Q884 650 746 650 H694 Q556 650 556 520 Z"/></clipPath>
   </defs>
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <g fill="none" stroke="#3dff8a" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
-    <!-- lenses -->
-    <rect x="178" y="372" width="282" height="230" rx="96" stroke-width="44"/>
-    <rect x="564" y="372" width="282" height="230" rx="96" stroke-width="44"/>
-    <!-- bridge -->
-    <path d="M460 452 Q512 410 564 452" stroke-width="40"/>
-    <!-- temples -->
-    <path d="M178 430 L132 410" stroke-width="40"/>
-    <path d="M846 430 L892 410" stroke-width="40"/>
-    <!-- PAID check in the right lens -->
-    <path d="M630 492 L688 548 L786 432" stroke-width="54"/>
-    <!-- price bars in the left lens -->
-    <path d="M250 455 H388" stroke-width="34" opacity="0.55"/>
-    <path d="M250 520 H340" stroke-width="34" opacity="0.55"/>
+  <!-- big soft sparkle dots -->
+  <g fill="#ffffff" opacity="0.5">
+    <path d="M820 180 l14 40 40 14 -40 14 -14 40 -14 -40 -40 -14 40 -14 z"/>
+    <path d="M190 210 l9 26 26 9 -26 9 -9 26 -9 -26 -26 -9 26 -9 z"/>
   </g>
+  <g filter="url(#shadow)">
+    <!-- top bar -->
+    <path d="M110 372 Q512 330 914 372 L914 410 Q512 376 110 410 Z" fill="#05070c"/>
+    <!-- lenses -->
+    <path d="M140 380 H468 V520 Q468 650 330 650 H278 Q140 650 140 520 Z" fill="url(#lens)"/>
+    <path d="M556 380 H884 V520 Q884 650 746 650 H694 Q556 650 556 520 Z" fill="url(#lens)"/>
+    <path d="M468 420 Q512 400 556 420" stroke="#05070c" stroke-width="34" fill="none"/>
+  </g>
+  <!-- reflections -->
+  <g clip-path="url(#L)">
+    <path d="M140 380 L360 380 L200 650 L140 650 Z" fill="url(#shine)"/>
+    <!-- TON-style diamond -->
+    <g filter="url(#glow)" fill="none" stroke="#3dff8a" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M244 450 H364 L304 580 Z"/>
+      <path d="M304 450 V580"/>
+    </g>
+  </g>
+  <g clip-path="url(#R)">
+    <path d="M556 380 L776 380 L616 650 L556 650 Z" fill="url(#shine)"/>
+    <path d="M654 516 L704 562 L790 466" fill="none" stroke="#3dff8a" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  </g>
+  <!-- smile = the counter -->
+  <path d="M392 790 Q512 860 632 790" fill="none" stroke="#05070c" stroke-width="30" stroke-linecap="round" opacity="0.85"/>
 </svg>
