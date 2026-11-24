@@ -4,7 +4,7 @@
 
 **A silent till for Even G2 glasses: say the price, the customer pays in Telegram, and the glasses show PAID only when the TON chain finalizes it. Screenshots don't count.**
 
-**[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Website](https://shoptill.vercel.app)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Demo script](DEMO_SCRIPT.md) · [Feature requests](FEATURE_REQUESTS.md)
+**[Watch the film (2:40)](https://youtu.be/-8fDTKFCQac)** · **[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Website](https://shoptill.vercel.app)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Demo script](DEMO_SCRIPT.md) · [Feature requests](FEATURE_REQUESTS.md)
 
 ShopTill is for crypto-native sellers who take payments face to face, where the buyer already has a TON wallet. The lead case is the in-person P2P USDT trader: someone who swaps cash for USDT with a stranger and today checks tonviewer by hand. The glasses show PAID only after the chain finalizes the payment, and they flag look-alike (fake) tokens that a hand check or a naive watcher can miss. The seller keeps their eyes on the person and the goods, not on a phone. ShopTill never holds money or keys.
 
@@ -23,6 +23,12 @@ Heads Up: Even Realities hackathon (DoraHacks). Tracks: **Crypto & DeFi** (TON c
 | Glasses | Even Hub **simulator** only. Not yet run on physical G2 hardware |
 | Detection time, block to PAID | 2 to 5.5 s across 4 logged payments ([raw log](evidence/server-log.txt)) |
 | Customer wallet | Tonkeeper (testnet and mainnet). Wallet in Telegram not yet tested |
+
+## The film
+
+[![ShopTill: Ada's story, 2:40](https://img.youtube.com/vi/-8fDTKFCQac/maxresdefault.jpg)](https://youtu.be/-8fDTKFCQac)
+
+Ada is a fictional market trader; every product moment in the film is real footage from the Even Hub simulator, a real phone, and TON testnet (plus the one mainnet payment).
 
 ## What it looks like
 

@@ -133,6 +133,8 @@ h2{font-size:clamp(34px,5vw,62px);line-height:.98;letter-spacing:-.04em;margin:0
 .lim{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .lim p{margin:0;padding:18px 20px;border:1.5px solid var(--line);border-radius:14px;color:var(--mist);background:var(--night2)}
 .lim b{color:var(--paper)}
+.video{position:relative;aspect-ratio:16/9;border-radius:22px;overflow:hidden;border:1.5px solid var(--line);box-shadow:0 40px 100px #000a,0 0 0 1px #ffc24722;background:#000}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 footer{border-top:1px solid #ffffff14;padding:34px 0 60px;color:var(--mute);font-size:14px}
 footer a{color:var(--mist)}
 /* reveal */
@@ -149,7 +151,7 @@ footer a{color:var(--mist)}
 <header class="top">
   <div class="wrap bar">
     <a class="brand" href="#top"><img src="/pay/site/logo.png" width="34" height="34" alt="" style="border-radius:50%">ShopTill</a>
-    <nav aria-label="Main"><a href="#story">Story</a><a href="#try">Try the till</a><a href="#how">How it works</a><a href="#proof">Proof</a></nav>
+    <nav aria-label="Main"><a href="#film">Film</a><a href="#story">Story</a><a href="#try">Try the till</a><a href="#how">How it works</a><a href="#proof">Proof</a></nav>
   </div>
 </header>
 
@@ -163,6 +165,7 @@ footer a{color:var(--mist)}
       <p class="lede rv d2">Say the price. Your customer pays in Telegram. Your glasses say PAID only when the TON chain confirms it, and they catch fake tokens a quick glance would miss.</p>
       <div class="cta rv d3">
         <a class="btn primary" href="https://t.me/ShopTillBot">Open @ShopTillBot</a>
+        <a class="btn" href="#film">Watch the film</a>
         <a class="btn" href="#try">Try the till</a>
         <a class="btn" href="https://github.com/Techkeyy/shoptill">GitHub</a>
       </div>
@@ -194,6 +197,15 @@ footer a{color:var(--mist)}
 </section>
 
 <div class="ticker" aria-hidden="true"><div class="tk" id="tk"><span>Say the price<b>→</b></span><span>They pay in Telegram<b>→</b></span><span>The chain decides<b>→</b></span><span>PAID, or a clear warning<b>→</b></span></div></div>
+
+<section class="sec" id="film">
+  <div class="wrap">
+    <p class="eyebrow rv"><span class="i">00</span>The film</p>
+    <h2 class="rv">Meet Ada. 2 minutes 40.</h2>
+    <div class="video rv"><iframe src="https://www.youtube-nocookie.com/embed/-8fDTKFCQac?rel=0" title="ShopTill film" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+    <p class="small rv">Ada is fictional. Every product moment is real footage: the Even Hub simulator, a real phone, TON testnet.</p>
+  </div>
+</section>
 
 <section class="sec paper" id="story">
   <div class="wrap">
