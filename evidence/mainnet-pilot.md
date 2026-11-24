@@ -6,7 +6,7 @@ The owner used their own money: 0.1 GRAM, about $0.10.
 
 | Step | Result |
 |---|---|
-| Pair + onboarding | New glasses code → @ShopTillBot → shop "Barber g" → seller wallet connected through TON Connect (mainnet) |
+| Pair + onboarding | New glasses code → @ShopTillBot → shop "Barber g" → seller wallet connected through TON Connect (mainnet). The wallet Tonkeeper connected was the owner's test "Customer" key on mainnet (`UQA4…Anaz`), not their main shop wallet. Same owner and same keys, so the funds are theirs. |
 | Voice | `stt heard "zero point one gram." -> 0.10 GRAM`. The confirm screen showed it, and the seller tapped to arm. |
 | Customer | Tonkeeper mainnet wallet `UQCC…QSEM` scanned the counter QR, opened the Mini App, and paid 0.1 GRAM |
 | Glasses | **PAID 0.10 GRAM** (`evidence/screens/mainnet-paid.png`) |
