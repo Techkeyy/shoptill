@@ -2,13 +2,13 @@
 
 **Say the price, your customer pays in Telegram, and your glasses show PAID only when the TON chain confirms it. Screenshots don't count.**
 
-**[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Pay page](https://shoptill.103-195-188-198.sslip.io)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Feature requests](FEATURE_REQUESTS.md) · [Demo script](DEMO_SCRIPT.md)
+**[Telegram bot @ShopTillBot](https://t.me/ShopTillBot)** · **[Pay page](https://shoptill.103-195-188-198.sslip.io)** · [health check](https://shoptill.103-195-188-198.sslip.io/healthz) · **[First real payment (tonviewer)](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc)** · **[Mainnet payment (tonviewer)](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332)** · [Evidence](evidence/) · [Packaged app `shoptill.ehpk`](shoptill.ehpk) · [Feature requests](FEATURE_REQUESTS.md) · [Demo script](DEMO_SCRIPT.md)
 
 ShopTill is a silent soundbox for Even G2 glasses. It is for people who take payments face to face with busy hands: barbers, coffee stands, pop-up sellers, tattoo artists, trainers.
 
 > *"They say they paid. Is it real, or is that a screenshot?"*
 
-Heads Up: Even Realities hackathon. Tracks: **Crypto & DeFi** (main; TON chain and TON Connect), **Messaging** (Telegram bot + Mini App), and **Best Telegram integration**. The demo runs on **TON testnet**. Telegram's Gram Wallet supports TON Connect on mainnet but has no testnet, so it was not used in the demo (planned: mainnet pilot).
+Heads Up: Even Realities hackathon. Tracks: **Crypto & DeFi** (main; TON chain and TON Connect), **Messaging** (Telegram bot + Mini App), and **Best Telegram integration**. The demo runs on **TON testnet**. The same build also took **one real mainnet payment** (0.1 GRAM, [evidence](evidence/mainnet-pilot.md)): voice price, Tonkeeper pay, PAID on the glasses, finalized on chain.
 
 ## Why this exists
 
@@ -40,10 +40,11 @@ Other states, all produced by the same classifier: `SHORT` (partial, stays open)
 
 ## Proof
 
-Strongest artifacts first. Everything is testnet except the read-only mainnet replay.
+Strongest artifacts first. Everything is testnet except the read-only mainnet replay and the one-payment mainnet pilot.
 
 | Evidence | What it shows | Result |
 |---|---|---|
+| [Mainnet pilot](evidence/mainnet-pilot.md) | One real 0.1 GRAM payment: voice price on the glasses, customer paid from a Tonkeeper mainnet wallet, glasses showed PAID 5.5 s after the block, receipt sent. Finalized on chain: [tonviewer](https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332). | One real payment, end to end |
 | [UAT 1: real owner payment](evidence/uat-1-first-payment.md) | The owner paid 12 test USDT from Tonkeeper testnet through the Telegram Mini App. The glasses (simulator) showed PAID and a receipt reached Telegram. [Transaction](https://testnet.tonviewer.com/transaction/060c5dce548948be0a171a0f6002f40ae40987ae4293b1e2b45cc9d56efcaefc) | PASS |
 | [Live edge states](evidence/live-states.md) | The real server service against real testnet, 8 cases, each with a transaction link | **8/8** |
 | [P0 spike](evidence/p0-spike.md) | 5 native GRAM, 5 allowlisted USDT, 1 look-alike USDT sent on testnet | **11/11** classified correctly; detection 1.3 to 3.6 s from send acceptance |
@@ -102,7 +103,7 @@ Order of checks in the classifier: finalized and successful, then allowlisted to
 ## Safety
 
 - **ShopTill never holds keys or funds.** The customer signs in their own wallet and the transfer goes straight to the seller. The server stores only the seller's public address. The product code contains no mnemonic or private key (audit grep of `server/src`, `apps/*`, `packages/core/src`).
-- **Testnet demo.** No mainnet funds are used. The mainnet replay is read-only.
+- **Testnet demo.** One mainnet pilot payment (0.1 GRAM, the owner's own funds) was run with `server/deploy/network.sh mainnet` and its own database, then switched back. Mainnet USDT is allowlisted in `packages/core/mainnet.config.json` but has not been paid yet.
 - **Device secret.** Each pair of glasses holds a random secret and sends it on every call. Unknown and wrong secrets get the same 403.
 - **No secrets in the repo or its git history** (audit grep of history; `.env*` and `.secrets/` are gitignored).
 - **Disclosed, not fixed** (full list D-1 to D-8 in the audit):
@@ -111,7 +112,7 @@ Order of checks in the classifier: finalized and successful, then allowlisted to
   - The Telegram shop link uses sequential ids, so shop names are enumerable.
   - CORS is `*` and the Mini App has no CSP. There are no cookies; auth is by header or signed token.
 - **Real-input gaps** (`evidence/real-input.md`): during an open sale every unrelated incoming transfer shows as UNMATCHED, by design. The replay's spam sample was thin (1 non-allowlisted jetton row). The first replay hit the 100-row page cap; the client now paginates (up to 10 pages of 100) and the re-run scanned 2,815 real payments and nothing was falsely counted, but PAID was not possible (no sale reference was present), so it tests noise, not detection. The busiest wallet still exceeds the 10-page cap per 24 h, so its window is incomplete.
-- **Gram Wallet is not in the demo.** Telegram's Gram Wallet supports TON Connect on mainnet only, so the testnet demo uses Tonkeeper testnet through TON Connect. A mainnet pilot with Gram Wallet is planned.
+- **Gram Wallet is not in the demo.** Telegram's Gram Wallet supports TON Connect on mainnet only, so the testnet demo uses Tonkeeper testnet through TON Connect. The mainnet pilot paid from Tonkeeper; Gram Wallet itself is still untested.
 - **G2 cannot alert while the app is closed.** The bot is meant to DM the seller then. That DM path is implemented but not yet tested on a closed-glasses run.
 
 ## Try it
@@ -174,7 +175,7 @@ npm test -w @shoptill/core        # 29 tests
 
 ## Limitations
 
-- Testnet only. No mainnet payment has gone through ShopTill.
+- One mainnet payment so far (GRAM). Mainnet USDT and Gram Wallet are untested.
 - Latency: the P0 spike measured detection at 1.3 to 3.6 s from send acceptance, for the matcher on testnet (`evidence/p0-spike.md`). The live-states harness took 12 to 25 s. That figure includes a wait of about 10 s for the wallet sequence number plus throttling on unauthenticated TON Center, so it is not user-perceived latency. User-perceived latency (send to PAID on the glasses) is to be measured in the next owner UAT. I have not measured with a TON Center API key.
 - Voice is shown at component level only: generated speech sent to the live `/api/stt` gave 12.00 for "twelve" and 5.00 GRAM for "five gram". It has not been tried through the simulator microphone. That check found "twelve fifty" parsed as 1250.00; after adding a Whisper prompt bias it returns 12.50 on the live server (re-checked). The glasses now pass the spoken currency to the sale ("five gram" arms GRAM); that path is unit-tested, not yet tried through the simulator microphone.
 - `/today`, `/history` and the seller DM with the glasses closed are implemented but untested in a live run.
