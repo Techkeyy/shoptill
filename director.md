@@ -2,7 +2,9 @@
 
 Handover file. Any director can take over from here. Keep it current after every phase.
 
-**STATUS: BUILDING. Day 1 (2026-11-23).**
+**STATUS: FEATURE-COMPLETE, PRE-VIDEO (2026-11-24).** UAT 2 passed (re-pair, real voice "twelve dollars fifty", pay, receipt, ~2 s). Mainnet pilot: one real 0.1 GRAM payment PAID (`evidence/mainnet-pilot.md`). Repo private at Techkeyy/shoptill. Repositioned to crypto-native face-to-face sellers; "chain check delayed" warning shipped; README has Limits and trust. Next: demo video, cold review 2, freeze, submit before 2026-11-29 19:59 UTC.
+
+**History: BUILDING. Day 1 (2026-11-23).**
 - **P0 PASSED: COMPONENT PROVEN.** 11/11 live testnet payments were classified correctly, max detection 3.6 s, and the fake USDT was caught (`evidence/p0-spike.md`).
 - **INTEGRATION PROVEN (USDT happy path), owner UAT 1:**
   - The whole chain works: glasses → bot setup → arm → customer pays in Telegram → glasses PAID → receipt (`evidence/uat-1-first-payment.md`).
@@ -145,6 +147,8 @@ Two scans of one armed sale each get their own sub-reference. The first full pay
 
 ## Log
 
+- 2026-11-24: **Outside critique** (owner pasted it) found 4 non-code gaps: foreground-only app, buyer must change not seller, trust moved to our server with silent failure, economics vs the soundbox analog. Done: repositioned README/DEMO_SCRIPT to crypto-native sellers (P2P USDT traders first); `chainDelayed` in /api/till/status after 15 s without a good chain read, glasses show DELAYED / "do NOT hand over yet"; README "Limits and trust". Process fix: added lenses to idea-research (Phase 5 every-party adoption + Phase 5C platform and trust reality) and master director (section 19 lenses 10-13, 20A lesson 8).
+- 2026-11-24: Mainnet pilot via `server/deploy/network.sh mainnet` (separate DB), 0.1 GRAM PAID in 5.5 s; switched back to testnet. Logo (Shades) set as bot photo; bot menu, description, seller buttons, /qr. TON Center key from @tonapibot rejected ("does not exist"), server stays keyless.
 - 2026-11-23: **UAT 1 PASSED** (`evidence/uat-1-first-payment.md`): PAID on the glasses, plus a receipt in Telegram with a tonviewer link.
 - 2026-11-23: **STT component check** (Windows TTS WAVs → live `/api/stt`): twelve→12.00, "twenty dollars"→20.00, "five gram"→5.00 GRAM, "one hundred and five"→105.00, small talk→null.
   - **BUG:** "twelve fifty"→"1250."→1250.00. Fix: Groq `prompt` bias toward decimal prices.
