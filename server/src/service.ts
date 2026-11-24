@@ -316,7 +316,7 @@ export class Till {
       },
     };
     if (s.paid_at) out.sale.paidAt = s.paid_at;
-    if (s.from_addr) out.sale.from = shortAddr(s.from_addr);
+    if (s.from_addr) out.sale.from = shortAddr(s.from_addr, this.d.cfg.network === 'testnet');
     const timing = this.timing(s);
     if (timing) out.timing = timing;
     if (s.state === 'EXTRA') out.sale.extra = formatMoney(BigInt(s.extra_raw), s.decimals);
@@ -325,7 +325,7 @@ export class Till {
       const u = this.compute(s).res.payments.filter((c) => c.verdict === 'UNMATCHED').pop();
       if (u) out.unmatched = {
         amount: formatMoney(BigInt(u.payment.amountRaw), u.payment.decimals),
-        from: shortAddr(u.payment.from), paymentId: u.payment.txHash,
+        from: shortAddr(u.payment.from, this.d.cfg.network === 'testnet'), paymentId: u.payment.txHash,
         asset: u.payment.asset.kind === 'native' ? 'GRAM' : 'USDT',
         utime: u.payment.utime, ageSec: Math.max(0, now - u.payment.utime),
       };
