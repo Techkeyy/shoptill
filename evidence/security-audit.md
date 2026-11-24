@@ -85,7 +85,7 @@ Confidence key: **[T]** reproduced or covered by a new automated test. **[C]** c
 - **Gitignore:** `.gitignore` covers `.env*` (except `.env.example`), `.secrets/`, `evidence/*.db` and `*.db-*`. `git check-ignore` confirmed it. `.env.example` has only empty keys.
 - **Evidence files:** they contain only testnet addresses, a tx hash and master addresses, which are public data. No secrets.
 - **Live public endpoints:** `/healthz` 200, manifest correct, unauthenticated `/api/till/status` returns 403, `/api/pay/info` returns 401, traversal attempts return 404, and the OPTIONS preflight works. These checks ran against the pre-fix server, before the 2026-11-23 deploy.
-- **Payment classifier:** ordering success, allowlist, ref, amount, time. Sub-refs and DUPLICATE are covered by the existing 22 core tests.
+- **Payment classifier:** ordering success, allowlist, ref, amount, time. Sub-refs and DUPLICATE are covered by the core tests (22 when this audit was written; core now has 29: 24 match and 5 toncenter, counted 2026-11-24).
 - **Concurrency:** one process with synchronous SQLite, so no cross-request races beyond S-07. The watcher is re-entrancy guarded.
 - **XSS on the pay page:** every dynamic string is passed through `esc()` (shop name, amounts, errors).
 - **Self-pay and customer-wallet guards:** the pay page blocks the seller's own wallet and checks the chain.

@@ -29,8 +29,8 @@ Everything on screen is the real product against the live server on TON testnet.
 1. `curl -s https://shoptill.103-195-188-198.sslip.io/healthz` returns OK.
 2. The glasses simulator shows "Say a price", not "Offline - retrying". If it shows a pairing code, the DB was reset: re-pair first.
 3. Customer wallet balance check: the pay page does a pre-flight and refuses if there is not enough USDT or GRAM for gas (a failed send would waste a take).
-4. Rehearse once and note the real time from "Pay" to PAID. Detection in the P0 spike was 1.3 to 3.6 s from send acceptance. The live-states harness took 12 to 25 s, which includes a wait of about 10 s for the sequence number and throttling, so it is not user-perceived latency. User-perceived latency is to be measured in the owner UAT. Do not narrate a number you did not see. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
-5. Voice: component-checked only, never through the simulator mic. Try the mic once before recording. If it fails, use swipe presets (Scene 3 gives both).
+4. Rehearse once and note the real time from "Pay" to PAID. Measured server-side from block time to PAID: about 2 s on testnet (UAT 2) and 5.5 s on the mainnet pilot without a TON Center API key. The P0 spike saw 1.3 to 3.6 s from send acceptance. The live-states harness took 12 to 25 s, which includes a wait of about 10 s for the sequence number and throttling, so it is not user-perceived latency. Do not narrate a number you did not see in this take. If it is slow, the dead air is real: cover it with the caption "waiting for the chain", do not cut it.
+5. Voice: tried through the simulator mic in UAT 2 ("Twelve dollars fifty." heard as 12.50 USDT) and in the mainnet pilot ("zero point one gram." heard as 0.10 GRAM). Early tries misheard (250, 50, "0.1" without gram) and the confirm screen caught them. Say a word between numbers ("twelve dollars fifty"). Try the mic once before recording. If it fails, use swipe presets (Scene 3 gives both).
 
 ## Scenes
 
@@ -60,7 +60,7 @@ Everything on screen is the real product against the live server on TON testnet.
 **On screen**
 1. Tab A: idle "Say a price". Tap, say "twelve". The simulator shows `READY 12.00 USDT`.
 2. If the mic fails on the day: swipe to the 12 preset and tap. Caption `swipe presets also work`. Never fake the voice.
-3. Cut to Tab B: the customer opens the counter link, the Mini App shows "Pay 12.00 USDT to <shop>".
+3. Cut to Tab B: the customer opens the counter link, the Mini App shows "Pay <shop>" with 12.00 USDT.
 
 **Caption:** `Say the price. Customer scans the counter QR in Telegram.`
 
@@ -87,7 +87,7 @@ Everything on screen is the real product against the live server on TON testnet.
 1. Tab A: arm a new sale, `READY 12.00 USDT`.
 2. Caption in a large banner: `INTENTIONAL ATTACK: attacker sends a look-alike USDT.` Say the word "attack" aloud so it is not read as a bug.
 3. Tab G (terminal): run the attacker helper (staging below). It sends 12 of the **fake** "USDT" jetton to the seller's address with the correct sale reference.
-4. Tab A: `(!) FAKE TOKEN - NOT PAID`, then `do NOT hand over goods`. Hold still 3 seconds.
+4. Tab A: `(!) FAKE TOKEN - NOT PAID`, then `do NOT hand over goods`. The sale stays open ("still waiting"). Hold still 3 seconds. Optional payoff: the customer then pays the real 12 USDT on the same sale and the glasses flip to PAID with no taps (the glasses keep polling on FAKE).
 5. Tab D: show the fake transfer on tonviewer next to the real one, and mark the two different jetton masters in the captions.
 6. **Stop moving the mouse. Say the climax line. Stay silent one full second.**
 
@@ -104,7 +104,7 @@ Everything on screen is the real product against the live server on TON testnet.
 
 **On screen**
 1. Tab F: the live-states table, 8 rows, hold 3 seconds. Caption: `8 of 8 edge states on real testnet`.
-2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `170 tests` (93 server, 48 glasses, 29 core).
+2. Quick cut to the repo README proof table. Captions: `11/11 spike`, `2,815 real mainnet payments, read-only: nothing falsely counted`, `186 tests` (106 server, 51 glasses, 29 core).
 3. Tab E: the first real owner payment (UAT 1) transaction.
 
 **Say**
@@ -145,6 +145,6 @@ About 380 spoken words across scenes 1 to 7. At a slow, confident 130 to 140 wor
 | 8 of 8 edge states on testnet | `evidence/live-states.md`, "Result: 8/8 as expected." |
 | 11/11 spike | `evidence/p0-spike.md`, "Correct: 11/11", max latency 3571 ms |
 | 2,815 real mainnet payments, read-only: nothing falsely counted (PAID not possible, no sale reference) | `evidence/real-input.md`, "Verdict" and "What this does and does not show" |
-| 170 tests | server 93, glasses 48, core 29 (run on 2026-11-23) |
+| 186 tests | server 106, glasses 51, core 29 (run on 2026-11-24) |
 | Never holds keys or funds | `evidence/security-audit.md`, question 6 |
 | Receipt arrives in Telegram | `evidence/uat-1-first-payment.md` (`receipt_sent=1`), shown live in Scene 4 |
