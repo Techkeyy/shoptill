@@ -21,7 +21,7 @@ const CORS = {
 };
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon', '.map': 'application/json',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon', '.map': 'application/json',
   '.woff2': 'font/woff2',
 };
 
@@ -165,6 +165,8 @@ export function createApi(d: ApiDeps) {
           return json(200, { ok: true });
         }
       }
+      // The landing page judges and visitors see at the bare domain.
+      if (r.method === 'GET' && r.path === '/') return serveStatic('/pay/landing.html');
       if (r.method === 'GET' && (r.path.startsWith('/pay') || r.path === '/icon.png')) return serveStatic(r.path);
       return json(404, { error: 'not found' });
     } catch (e) {

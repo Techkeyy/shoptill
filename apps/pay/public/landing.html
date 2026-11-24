@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopTill · Screenshots don't count</title>
+<meta name="description" content="A silent till for Even G2 glasses. Say the price, the customer pays in Telegram, and the glasses show PAID only when the TON chain confirms it.">
+<meta property="og:title" content="ShopTill · Screenshots don't count">
+<meta property="og:description" content="Say the price on Even G2 glasses. The customer pays in Telegram. PAID shows only when the TON chain confirms it, and fake tokens are caught.">
+<meta property="og:image" content="/pay/site/logo.png">
+<link rel="icon" href="/icon.png">
+<style>
+  :root { --ink:#050807; --panel:#0e1714; --line:#1f2d29; --paper:#eef5f1; --mist:#a9b8b1; --mute:#6e7f78; --green:#3dff8a; --ton:#0098ea; --tg:#2aabee; --red:#ff4d5e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ink); color: var(--paper); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { background: radial-gradient(900px 600px at 80% -10%, #3dff8a1f, transparent 60%), radial-gradient(800px 600px at -10% 30%, #0098ea18, transparent 60%), var(--ink); }
+  a { color: var(--green); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 56px 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: center; }
+  h1 { font-size: clamp(44px, 8vw, 84px); line-height: 0.95; letter-spacing: -0.05em; margin: 0 0 14px; }
+  .tag { font-size: clamp(19px, 2.6vw, 25px); color: var(--mist); max-width: 640px; margin: 0; }
+  .tag b { color: var(--green); font-weight: 650; }
+  .logo { width: clamp(120px, 18vw, 190px); height: auto; border-radius: 50%; box-shadow: 0 0 80px #3dff8a44; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 999px; font-weight: 650; text-decoration: none; border: 1.5px solid var(--line); color: var(--paper); background: var(--panel); }
+  .btn.primary { background: var(--tg); border-color: var(--tg); color: #fff; }
+  .note { color: var(--mute); font-size: 14px; }
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(26px, 4vw, 38px); letter-spacing: -0.03em; margin: 0 0 18px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: s; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .step::before { counter-increment: s; content: counter(s); display: inline-flex; width: 32px; height: 32px; border-radius: 50%; align-items: center; justify-content: center; background: var(--green); color: var(--ink); font-weight: 750; margin-bottom: 10px; }
+  .step h3 { margin: 0 0 6px; font-size: 18px; }
+  .step p { margin: 0; color: var(--mist); font-size: 15px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  figure { margin: 0; background: #000; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { padding: 10px 14px; font-size: 14px; color: var(--mist); background: var(--panel); }
+  .tg { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .big { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; color: var(--green); line-height: 1; }
+  .card p { margin: 8px 0 0; color: var(--mist); font-size: 15px; }
+  .why { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .why .card h3 { margin: 0 0 6px; }
+  .bad { color: var(--red); }
+  ul.limits { color: var(--mist); padding-left: 20px; margin: 0; }
+  ul.limits li { margin: 6px 0; }
+  footer { padding: 30px 0 60px; color: var(--mute); font-size: 14px; border-top: 1px solid var(--line); }
+  @media (max-width: 860px) { .steps, .proof { grid-template-columns: 1fr 1fr; } .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { header { grid-template-columns: 1fr; } .logo { order: -1; } .steps, .grid, .proof, .why, .tg { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ShopTill</h1>
+      <p class="tag">A silent till for Even G2 glasses. Say the price, the customer pays in Telegram, and your glasses say <b>PAID</b> only when the TON chain confirms it. <b>Screenshots don't count.</b></p>
+      <div class="cta">
+        <a class="btn primary" href="https://t.me/ShopTillBot">Open @ShopTillBot</a>
+        <a class="btn" href="https://github.com/Techkeyy/shoptill">Code on GitHub</a>
+        <a class="btn" href="https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332">The mainnet payment</a>
+      </div>
+      <p class="note">Built for Heads Up: Even Realities (DoraHacks). Live on TON testnet. Runs in the Even Hub simulator today.</p>
+    </div>
+    <img class="logo" src="/pay/site/logo.png" alt="ShopTill logo">
+  </header>
+
+  <section>
+    <h2>Who it's for</h2>
+    <div class="why">
+      <div class="card"><h3>Crypto-native sellers, face to face</h3><p>P2P USDT traders, booths at TON events, Telegram sellers who meet buyers in person. Their buyers already have a TON wallet.</p></div>
+      <div class="card"><h3>The two traps</h3><p><span class="bad">A "payment sent" screenshot</span> that never arrives, and <span class="bad">a look-alike token</span> that reads as USDT. Checking an explorer means looking away from the person in front of you.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><h3>Pair in Telegram</h3><p>Send the code on the glasses to @ShopTillBot, name the shop, connect the wallet that gets paid, print the counter QR.</p></div>
+      <div class="step"><h3>Say the price</h3><p>Tap the glasses and say "twelve dollars fifty". It shows what it heard and waits for your tap.</p></div>
+      <div class="step"><h3>Customer pays</h3><p>They scan the QR, the Mini App opens with the amount filled in, and they approve in their own wallet. Money goes wallet to wallet.</p></div>
+      <div class="step"><h3>The chain decides</h3><p>PAID only for a finalized transfer of the real token, with this sale's reference, the right amount, on time.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the seller sees</h2>
+    <div class="grid">
+      <figure><img src="/pay/site/ready.jpg" alt="READY 12.00 USDT" loading="lazy"><figcaption>READY, waiting for payment</figcaption></figure>
+      <figure><img src="/pay/site/fake.jpg" alt="FAKE 12.00 NOT PAID" loading="lazy"><figcaption>A real look-alike token: FAKE, not paid</figcaption></figure>
+      <figure><img src="/pay/site/paid.jpg" alt="PAID 12.00 USDT" loading="lazy"><figcaption>The honest payment that followed: PAID</figcaption></figure>
+      <figure><img src="/pay/site/short.jpg" alt="SHORT 5.00 of 10.00" loading="lazy"><figcaption>SHORT: shows what is missing</figcaption></figure>
+      <figure><img src="/pay/site/uat2-paid.jpg" alt="PAID 12.50 USDT" loading="lazy"><figcaption>PAID from a real voice-priced sale</figcaption></figure>
+      <figure><img src="/pay/site/mainnet-paid.jpg" alt="PAID 0.10 GRAM on mainnet" loading="lazy"><figcaption>PAID 0.10 GRAM on mainnet</figcaption></figure>
+    </div>
+    <div class="tg">
+      <figure><img src="/pay/site/tg-help-and-menu.jpg" alt="ShopTill bot help and seller menu" loading="lazy"><figcaption>The bot: help, today's total, history, counter QR</figcaption></figure>
+      <figure><img src="/pay/site/tg-receipt.jpg" alt="Receipt with tonviewer link" loading="lazy"><figcaption>The receipt, with a link anyone can verify</figcaption></figure>
+    </div>
+    <p class="note">Glasses screens are real captures from the Even Hub simulator against this live server.</p>
+  </section>
+
+  <section>
+    <h2>Proof, not promises</h2>
+    <div class="proof">
+      <div class="card"><div class="big">1</div><p>real mainnet payment, PAID on the glasses. <a href="https://tonviewer.com/transaction/4549066d17326fa1c0cd98a5a7abf0a75f6b4db7c4737552c341c87269dc6332">tonviewer</a></p></div>
+      <div class="card"><div class="big">8 / 8</div><p>edge cases proven on testnet with real transactions: PAID, SHORT, EXTRA, DUPLICATE, FAKE, UNMATCHED, LATE, GRAM.</p></div>
+      <div class="card"><div class="big">186</div><p>tests, passing on a fresh clone. Security audit with the high findings fixed. MIT licensed.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Limits, said plainly</h2>
+    <ul class="limits">
+      <li>Runs in the Even Hub simulator; not yet tested on physical G2 hardware.</li>
+      <li>Till mode: the seller opens ShopTill per sale. G2 can't alert while the app is closed, so late payments go to the bot instead.</li>
+      <li>The buyer must already use TON. ShopTill doesn't onboard new crypto users.</li>
+      <li>You trust this server to read the chain. If it can't, the glasses say Offline or "check delayed, do not hand over". Every receipt links to tonviewer, and the code is open so you can run your own.</li>
+      <li>ShopTill never holds money or keys.</li>
+    </ul>
+  </section>
+
+  <footer>ShopTill · <a href="https://t.me/ShopTillBot">@ShopTillBot</a> · <a href="https://github.com/Techkeyy/shoptill">GitHub</a> · TON testnet</footer>
+</div>
+</body>
+</html>
