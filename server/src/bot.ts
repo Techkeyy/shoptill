@@ -116,7 +116,11 @@ export class Bot {
   private async sendWalletPrompt(chat: number, shopId: number, name: string) {
     const t = signToken({ k: 'setup', chat, shop: shopId, exp: this.nowSec() + SETUP_TTL }, this.cfg.botToken);
     const url = `${this.cfg.publicUrl}/pay/?mode=setup&t=${encodeURIComponent(t)}`;
-    await this.tg.send(chat, `Great, "${name}". Now connect the wallet that should receive payments. Only your public address is read.`,
+    const changing = this.svc.shop(shopId)?.stage === 'ready';
+    const text = changing
+      ? `Connect the new wallet for "${name}". Payments go to it from your next sale. Your counter QR stays the same. Only your public address is read.`
+      : `Great, "${name}". Now connect the wallet that should receive payments. Only your public address is read.`;
+    await this.tg.send(chat, text,
       { inline_keyboard: [[{ text: 'Connect your wallet', web_app: { url } }]] });
   }
 
