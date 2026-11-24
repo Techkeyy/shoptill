@@ -64,7 +64,13 @@ async function setup() {
       // received a mainnet payment at its mainnet twin address during the pilot).
       let net = 'testnet';
       try { net = (await api('/api/network')).network; } catch { /* default testnet */ }
-      if (cur.account.chain !== (net === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)) { draw(`Please switch your wallet to ${net}, then reconnect.`); return; }
+      if (cur.account.chain !== (net === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)) {
+        // A saved TON Connect session keeps the network it was made on, even after the wallet app
+        // switches network. Drop it so the seller reconnects fresh on the right network.
+        try { await tc.disconnect(); } catch { /* ignore */ }
+        draw(`This connection is on the wrong network. Switch your wallet to ${net}, then tap Connect wallet.`);
+        return;
+      }
       try {
         await api('/api/shop/address', { method: 'POST', body: JSON.stringify({ t: token, address: cur.account.address }) });
         // never let the seller's session leak into the customer pay flow on this device
